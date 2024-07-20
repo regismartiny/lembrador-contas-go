@@ -10,6 +10,7 @@ import (
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/user_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -47,6 +48,27 @@ func createUserEmailUniqueIndex(ctx context.Context, coll *mongo.Collection) {
 	}
 }
 
+func (ur *UserRepository) CreateUser(
+	ctx context.Context,
+	userEntity *user_entity.User) *internal_error.InternalError {
+
+	userEntityMongo := &UserEntityMongo{
+		Id:        userEntity.Id,
+		Name:      userEntity.Name,
+		Email:     userEntity.Email,
+		Status:    userEntity.Status,
+		CreatedAt: userEntity.CreatedAt.Unix(),
+		UpdatedAt: userEntity.UpdatedAt.Unix(),
+	}
+
+	if _, err := ur.Collection.InsertOne(ctx, userEntityMongo); err != nil {
+		logger.Error("Error trying to insert user", err)
+		return internal_error.NewInternalServerError("Error trying to insert user")
+	}
+
+	return nil
+}
+
 func (ur *UserRepository) FindUserById(
 	ctx context.Context, userId string) (*user_entity.User, *internal_error.InternalError) {
 	filter := bson.M{"_id": userId}
@@ -76,23 +98,49 @@ func (ur *UserRepository) FindUserById(
 	return userEntity, nil
 }
 
-func (ur *UserRepository) CreateUser(
+func (repo *UserRepository) FindUsers(
 	ctx context.Context,
-	userEntity *user_entity.User) *internal_error.InternalError {
+	status user_entity.UserStatus,
+	name string,
+	email string) ([]user_entity.User, *internal_error.InternalError) {
+	filter := bson.M{}
 
-	userEntityMongo := &UserEntityMongo{
-		Id:        userEntity.Id,
-		Name:      userEntity.Name,
-		Email:     userEntity.Email,
-		Status:    userEntity.Status,
-		CreatedAt: userEntity.CreatedAt.Unix(),
-		UpdatedAt: userEntity.UpdatedAt.Unix(),
+	if status != 0 {
+		filter["status"] = status
 	}
 
-	if _, err := ur.Collection.InsertOne(ctx, userEntityMongo); err != nil {
-		logger.Error("Error trying to insert user", err)
-		return internal_error.NewInternalServerError("Error trying to insert user")
+	if name != "" {
+		filter["name"] = primitive.Regex{Pattern: name, Options: "i"}
 	}
 
-	return nil
+	if email != "" {
+		filter["email"] = primitive.Regex{Pattern: email, Options: "i"}
+	}
+
+	cursor, err := repo.Collection.Find(ctx, filter)
+	if err != nil {
+		logger.Error("Error finding users", err)
+		return nil, internal_error.NewInternalServerError("Error finding users")
+	}
+	defer cursor.Close(ctx)
+
+	var usersMongo []UserEntityMongo
+	if err := cursor.All(ctx, &usersMongo); err != nil {
+		logger.Error("Error decoding users", err)
+		return nil, internal_error.NewInternalServerError("Error decoding users")
+	}
+
+	var usersEntity []user_entity.User
+	for _, user := range usersMongo {
+		usersEntity = append(usersEntity, user_entity.User{
+			Id:        user.Id,
+			Name:      user.Name,
+			Email:     user.Email,
+			Status:    user.Status,
+			CreatedAt: time.Unix(user.CreatedAt, 0),
+			UpdatedAt: time.Unix(user.UpdatedAt, 0),
+		})
+	}
+
+	return usersEntity, nil
 }

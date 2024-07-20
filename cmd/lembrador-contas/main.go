@@ -28,12 +28,11 @@ func main() {
 		return
 	}
 
-	log.Println(databaseConnection.Name())
-
 	router := gin.Default()
 
 	userController := initDependencies(ctx, databaseConnection)
 
+	router.GET("/user", userController.FindUsers)
 	router.GET("/user/:userId", userController.FindUserById)
 	router.POST("/user", userController.CreateUser)
 

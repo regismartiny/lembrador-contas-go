@@ -23,12 +23,16 @@ type CreateUserOutputDTO struct {
 }
 
 type UserUseCaseInterface interface {
-	FindUserById(
-		ctx context.Context,
-		id string) (*UserOutputDTO, *internal_error.InternalError)
 	CreateUser(
 		ctx context.Context,
 		auctionInput UserInputDTO) *internal_error.InternalError
+	FindUserById(
+		ctx context.Context,
+		id string) (*UserOutputDTO, *internal_error.InternalError)
+	FindUsers(
+		ctx context.Context,
+		status user_entity.UserStatus,
+		name, email string) ([]UserOutputDTO, *internal_error.InternalError)
 }
 
 type UserUseCase struct {

@@ -17,23 +17,31 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-type UserStatus int
-
-func (s UserStatus) String() string {
-	switch s {
-	case Active:
-		return "active"
-	case Inactive:
-		return "inactive"
-	default:
-		return "unknown"
-	}
-}
+type UserStatus uint8
 
 const (
 	Active UserStatus = iota
 	Inactive
 )
+
+func (s UserStatus) Name() string {
+	return userStatusNames[s]
+}
+
+var userStatusNames = []string{
+	"active",
+	"inactive",
+}
+
+func GetUserStatusByName(name string) (UserStatus, *internal_error.InternalError) {
+	for k, v := range userStatusNames {
+		if v == name {
+			return UserStatus(k), nil
+		}
+	}
+
+	return UserStatus(0), internal_error.NewBadRequestError("invalid user status name")
+}
 
 func CreateUser(
 	name string,
@@ -66,6 +74,10 @@ func (user *User) Validate() *internal_error.InternalError {
 }
 
 type UserRepositoryInterface interface {
-	FindUserById(ctx context.Context, userId string) (*User, *internal_error.InternalError)
 	CreateUser(ctx context.Context, userEntity *User) *internal_error.InternalError
+	FindUserById(ctx context.Context, userId string) (*User, *internal_error.InternalError)
+	FindUsers(
+		ctx context.Context,
+		status UserStatus,
+		name, email string) ([]User, *internal_error.InternalError)
 }
