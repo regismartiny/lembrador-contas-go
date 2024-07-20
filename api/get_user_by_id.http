@@ -1,0 +1,4 @@
+
+GET http://localhost:8080/user/eaadb8f2-e597-4ff0-8601-b255b389bb24 HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
