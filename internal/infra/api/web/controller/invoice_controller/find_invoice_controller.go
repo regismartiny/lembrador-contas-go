@@ -11,11 +11,11 @@ import (
 )
 
 func (u *InvoiceController) FindInvoiceById(c *gin.Context) {
-	invoiceId := c.Param("invoiceId")
+	invoiceId := c.Param("id")
 
 	if err := uuid.Validate(invoiceId); err != nil {
 		errRest := rest_err.NewBadRequestError("Invalid fields", rest_err.Causes{
-			Field:   "invoiceId",
+			Field:   "id",
 			Message: "Invalid UUID value",
 		})
 

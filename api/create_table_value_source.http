@@ -1,0 +1,17 @@
+
+POST http://localhost:8080/table_value_source HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "name": "RGE",
+    "data": [
+        {
+            "period": {
+                "month": 10,
+                "year": 2024
+            },
+            "amount": 300.50
+        }
+    ]
+}

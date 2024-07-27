@@ -11,11 +11,11 @@ import (
 )
 
 func (u *BillController) FindBillById(c *gin.Context) {
-	billId := c.Param("billId")
+	billId := c.Param("id")
 
 	if err := uuid.Validate(billId); err != nil {
 		errRest := rest_err.NewBadRequestError("Invalid fields", rest_err.Causes{
-			Field:   "billId",
+			Field:   "id",
 			Message: "Invalid UUID value",
 		})
 

@@ -11,11 +11,11 @@ import (
 )
 
 func (u *UserController) FindUserById(c *gin.Context) {
-	userId := c.Param("userId")
+	userId := c.Param("id")
 
 	if err := uuid.Validate(userId); err != nil {
 		errRest := rest_err.NewBadRequestError("Invalid fields", rest_err.Causes{
-			Field:   "userId",
+			Field:   "id",
 			Message: "Invalid UUID value",
 		})
 
