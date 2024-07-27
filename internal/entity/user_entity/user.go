@@ -20,7 +20,7 @@ type User struct {
 type UserStatus uint8
 
 const (
-	Active UserStatus = iota
+	Active UserStatus = iota + 1
 	Inactive
 )
 
@@ -29,6 +29,7 @@ func (s UserStatus) Name() string {
 }
 
 var userStatusNames = []string{
+	"",
 	"active",
 	"inactive",
 }

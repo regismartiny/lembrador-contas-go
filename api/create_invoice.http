@@ -1,0 +1,10 @@
+
+POST http://localhost:8080/invoice HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "name": "Água",
+    "dueDate": "2024-10-10",
+    "amount": 60.50
+}

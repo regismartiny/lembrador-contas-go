@@ -23,7 +23,7 @@ type Bill struct {
 type BillStatus uint8
 
 const (
-	Active BillStatus = iota
+	Active BillStatus = iota + 1
 	Inactive
 )
 
@@ -40,6 +40,7 @@ func (s BillStatus) Name() string {
 }
 
 var billStatusNames = []string{
+	"",
 	"active",
 	"inactive",
 }
@@ -127,8 +128,8 @@ func CreateBill(
 }
 
 func (bill *Bill) Validate() *internal_error.InternalError {
-	if len(bill.Name) <= 3 ||
-		len(bill.Company) <= 3 {
+	if len(bill.Name) < 3 ||
+		len(bill.Company) < 3 {
 		return internal_error.NewBadRequestError("invalid bill object")
 	}
 

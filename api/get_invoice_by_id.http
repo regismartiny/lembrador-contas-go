@@ -1,0 +1,4 @@
+
+GET http://localhost:8080/invoice/fdfacaa3-4e75-483e-8db9-57695bb4fa6a HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
