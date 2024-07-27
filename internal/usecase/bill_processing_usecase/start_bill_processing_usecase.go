@@ -3,10 +3,15 @@ package bill_processing_usecase
 import (
 	"context"
 	"log"
+	"os"
 	"time"
 
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_processing_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
+)
+
+const (
+	PROCESSING_TIMEOUT_DURATION = "PROCESSING_TIMEOUT_DURATION"
 )
 
 type BillProcessingInputDTO struct {
@@ -53,7 +58,9 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 
 		go startProcessing()
 
-		time.Sleep(30 * time.Second)
+		processingTimeout := os.Getenv(PROCESSING_TIMEOUT_DURATION)
+		processingTimeoutDuration, _ := time.ParseDuration(processingTimeout)
+		time.Sleep(processingTimeoutDuration)
 
 		billProcessing, err := u.billProcessingRepository.FindBillProcessingById(ctx, billProcessing.Id)
 		if err != nil {
