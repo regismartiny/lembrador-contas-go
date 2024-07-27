@@ -8,15 +8,18 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/regismartiny/lembrador-contas-go/configuration/database/mongodb"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/bill_controller"
+	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/bill_processing_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/email_value_source_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/invoice_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/table_value_source_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/user_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/bill"
+	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/bill_processing"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/email_value_source"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/invoice"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/table_value_source"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/user"
+	"github.com/regismartiny/lembrador-contas-go/internal/usecase/bill_processing_usecase"
 	"github.com/regismartiny/lembrador-contas-go/internal/usecase/bill_usecase"
 	"github.com/regismartiny/lembrador-contas-go/internal/usecase/email_value_source_usecase"
 	"github.com/regismartiny/lembrador-contas-go/internal/usecase/invoice_usecase"
@@ -44,7 +47,7 @@ func main() {
 	router := gin.Default()
 
 	userController, billController, invoiceControler,
-		tableValueSourceController, emailValueSourceController := initDependencies(ctx, databaseConnection)
+		tableValueSourceController, emailValueSourceController, billProcessingController := initDependencies(ctx, databaseConnection)
 
 	router.GET("/user", userController.FindUsers)
 	router.GET("/user/:id", userController.FindUserById)
@@ -63,6 +66,8 @@ func main() {
 	router.GET("/email-value-source/:id", emailValueSourceController.FindEmailValueSourceById)
 	router.POST("/email-value-source", emailValueSourceController.CreateEmailValueSource)
 	router.PUT("/email-value-source/:id", emailValueSourceController.UpdateEmailValueSource)
+	router.POST("/bill-processing/start", billProcessingController.StartBillProcessing)
+	router.GET("/bill-processing/status/:id", billProcessingController.GetBillProcessingStatus)
 
 	router.Run(":8080")
 }
@@ -72,7 +77,8 @@ func initDependencies(ctx context.Context, database *mongo.Database) (
 	billController *bill_controller.BillController,
 	invoiceControler *invoice_controller.InvoiceController,
 	tableValueSourceController *table_value_source_controller.TableValueSourceController,
-	emailValueSourceController *email_value_source_controller.EmailValueSourceController) {
+	emailValueSourceController *email_value_source_controller.EmailValueSourceController,
+	billProcessingController *bill_processing_controller.BillProcessingController) {
 
 	userRepository := user.NewUserRepository(ctx, database)
 
@@ -99,5 +105,10 @@ func initDependencies(ctx context.Context, database *mongo.Database) (
 	emailValueSourceController = email_value_source_controller.NewEmailValueSourceController(
 		email_value_source_usecase.NewEmailValueSourceUseCase(emailValueSourceRepository))
 
-	return userController, billController, invoiceController, tableValueSourceController, emailValueSourceController
+	billProcessingRepository := bill_processing.NewBillProcessingRepository(ctx, database)
+
+	billProcessingController = bill_processing_controller.NewBillProcessingController(
+		bill_processing_usecase.NewBillProcessingUseCase(billProcessingRepository))
+
+	return userController, billController, invoiceController, tableValueSourceController, emailValueSourceController, billProcessingController
 }
