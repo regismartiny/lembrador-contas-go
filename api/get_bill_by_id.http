@@ -1,0 +1,4 @@
+
+GET http://localhost:8080/bill/96fc7771-cfc3-4261-b9bd-131013e7c450 HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json

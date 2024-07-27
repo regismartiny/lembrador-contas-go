@@ -7,8 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/regismartiny/lembrador-contas-go/configuration/database/mongodb"
+	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/bill_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/user_controller"
+	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/bill"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/database/user"
+	"github.com/regismartiny/lembrador-contas-go/internal/usecase/bill_usecase"
 	"github.com/regismartiny/lembrador-contas-go/internal/usecase/user_usecase"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -22,6 +25,7 @@ func main() {
 		return
 	}
 
+	log.Println("Establising connection with database...")
 	databaseConnection, err := mongodb.NewMongoDBConnection(ctx)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -30,22 +34,31 @@ func main() {
 
 	router := gin.Default()
 
-	userController := initDependencies(ctx, databaseConnection)
+	userController, billController := initDependencies(ctx, databaseConnection)
 
 	router.GET("/user", userController.FindUsers)
 	router.GET("/user/:userId", userController.FindUserById)
 	router.POST("/user", userController.CreateUser)
+	router.GET("/bill", billController.FindBills)
+	router.GET("/bill/:billId", billController.FindBillById)
+	router.POST("/bill", billController.CreateBill)
 
 	router.Run(":8080")
 }
 
 func initDependencies(ctx context.Context, database *mongo.Database) (
-	userController *user_controller.UserController) {
+	userController *user_controller.UserController,
+	billController *bill_controller.BillController) {
 
 	userRepository := user.NewUserRepository(ctx, database)
 
 	userController = user_controller.NewUserController(
 		user_usecase.NewUserUseCase(userRepository))
 
-	return userController
+	billRepository := bill.NewBillRepository(ctx, database)
+
+	billController = bill_controller.NewBillController(
+		bill_usecase.NewBillUseCase(billRepository))
+
+	return userController, billController
 }

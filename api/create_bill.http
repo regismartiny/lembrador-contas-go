@@ -1,0 +1,12 @@
+
+POST http://localhost:8080/bill HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "name": "Energia",
+    "company": "CPF Energia",
+    "valueSourceType": "email",
+    "valueSourceId": "0",
+    "dueDay": 10
+}
