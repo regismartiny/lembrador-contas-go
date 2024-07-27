@@ -32,7 +32,7 @@ type CreateBillOutputDTO struct {
 type BillUseCaseInterface interface {
 	CreateBill(
 		ctx context.Context,
-		auctionInput BillInputDTO) *internal_error.InternalError
+		billInput BillInputDTO) *internal_error.InternalError
 	FindBillById(
 		ctx context.Context,
 		id string) (*BillOutputDTO, *internal_error.InternalError)

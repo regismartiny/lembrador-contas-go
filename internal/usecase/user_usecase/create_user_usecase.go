@@ -25,7 +25,7 @@ type CreateUserOutputDTO struct {
 type UserUseCaseInterface interface {
 	CreateUser(
 		ctx context.Context,
-		auctionInput UserInputDTO) *internal_error.InternalError
+		userInput UserInputDTO) *internal_error.InternalError
 	FindUserById(
 		ctx context.Context,
 		id string) (*UserOutputDTO, *internal_error.InternalError)

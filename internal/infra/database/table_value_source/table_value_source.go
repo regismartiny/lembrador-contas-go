@@ -69,6 +69,30 @@ func (ur *TableValueSourceRepository) CreateTableValueSource(
 	return nil
 }
 
+func (ur *TableValueSourceRepository) UpdateTableValueSource(
+	ctx context.Context,
+	tableValueSourceEntity *table_value_source_entity.TableValueSource) *internal_error.InternalError {
+
+	filter := bson.M{"_id": tableValueSourceEntity.Id}
+
+	TableValueSourceEntityMongo := &TableValueSourceEntityMongo{
+		Id:        tableValueSourceEntity.Id,
+		Name:      tableValueSourceEntity.Name,
+		Data:      tableValueSourceEntity.Data,
+		Status:    tableValueSourceEntity.Status,
+		CreatedAt: tableValueSourceEntity.CreatedAt.Unix(),
+		UpdatedAt: tableValueSourceEntity.UpdatedAt.Unix(),
+	}
+
+	_, err := ur.Collection.UpdateOne(ctx, filter, bson.M{"$set": TableValueSourceEntityMongo})
+	if err != nil {
+		logger.Error("Error trying to update tableValueSource", err)
+		return internal_error.NewInternalServerError("Error trying to update tableValueSource")
+	}
+
+	return nil
+}
+
 func (ur *TableValueSourceRepository) FindTableValueSourceById(
 	ctx context.Context, tableValueSourceId string) (*table_value_source_entity.TableValueSource, *internal_error.InternalError) {
 	filter := bson.M{"_id": tableValueSourceId}

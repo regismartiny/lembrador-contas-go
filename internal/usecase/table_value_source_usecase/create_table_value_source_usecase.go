@@ -26,7 +26,7 @@ type TableValueSourceDataPeriodDTO struct {
 type TableValueSourceUseCaseInterface interface {
 	CreateTableValueSource(
 		ctx context.Context,
-		auctionInput TableValueSourceInputDTO) *internal_error.InternalError
+		tableValueSourceInput TableValueSourceInputDTO) *internal_error.InternalError
 	FindTableValueSourceById(
 		ctx context.Context,
 		id string) (*TableValueSourceOutputDTO, *internal_error.InternalError)
@@ -34,6 +34,10 @@ type TableValueSourceUseCaseInterface interface {
 		ctx context.Context,
 		status table_value_source_entity.TableValueSourceStatus,
 		name string) ([]TableValueSourceOutputDTO, *internal_error.InternalError)
+	UpdateTableValueSource(
+		ctx context.Context,
+		id string,
+		tableValueSourceInput UpdateTableValueSourceInputDTO) *internal_error.InternalError
 }
 
 type TableValueSourceUseCase struct {

@@ -1,0 +1,12 @@
+
+POST http://localhost:8080/bill HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "name": "Internet",
+    "company": "Vero",
+    "valueSourceType": "table",
+    "valueSourceId": "ad5cf585-6d20-4e60-809b-9f5f4344f7a3",
+    "dueDay": 10
+}

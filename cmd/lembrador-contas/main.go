@@ -54,6 +54,7 @@ func main() {
 	router.GET("/table_value_source", tableValueSourceController.FindTableValueSources)
 	router.GET("/table_value_source/:id", tableValueSourceController.FindTableValueSourceById)
 	router.POST("/table_value_source", tableValueSourceController.CreateTableValueSource)
+	router.PUT("/table_value_source/:id", tableValueSourceController.UpdateTableValueSource)
 
 	router.Run(":8080")
 }

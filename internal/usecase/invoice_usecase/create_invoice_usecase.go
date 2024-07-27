@@ -28,7 +28,7 @@ type CreateInvoiceOutputDTO struct {
 type InvoiceUseCaseInterface interface {
 	CreateInvoice(
 		ctx context.Context,
-		auctionInput InvoiceInputDTO) *internal_error.InternalError
+		invoiceInput InvoiceInputDTO) *internal_error.InternalError
 	FindInvoiceById(
 		ctx context.Context,
 		id string) (*InvoiceOutputDTO, *internal_error.InternalError)

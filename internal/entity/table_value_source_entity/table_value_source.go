@@ -92,6 +92,36 @@ func CreateTableValueSource(
 	return tableValueSource, nil
 }
 
+func (tableValueSource *TableValueSource) Update(
+	name string,
+	data []TableValueSourceData,
+	status string) *internal_error.InternalError {
+
+	if name != "" {
+		tableValueSource.Name = name
+	}
+
+	if data != nil {
+		tableValueSource.Data = data
+	}
+
+	if status != "" {
+		status, err := GetTableValueSourceStatusByName(status)
+		if err != nil {
+			return err
+		}
+		tableValueSource.Status = status
+	}
+
+	tableValueSource.UpdatedAt = time.Now()
+
+	if err := tableValueSource.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (tableValueSource *TableValueSource) Validate() *internal_error.InternalError {
 	if len(tableValueSource.Name) < 3 {
 		return internal_error.NewBadRequestError("invalid tableValueSource object")
@@ -112,4 +142,5 @@ type TableValueSourceRepositoryInterface interface {
 		ctx context.Context,
 		status TableValueSourceStatus,
 		name string) ([]TableValueSource, *internal_error.InternalError)
+	UpdateTableValueSource(ctx context.Context, tableValueSourceEntity *TableValueSource) *internal_error.InternalError
 }
