@@ -1,0 +1,4 @@
+
+GET http://localhost:8080/email-value-source/91f9556f-9571-41e6-b320-18cf3de3990f HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json

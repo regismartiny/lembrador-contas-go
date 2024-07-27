@@ -1,5 +1,5 @@
 
-PUT http://localhost:8080/table_value_source/ad5cf585-6d20-4e60-809b-9f5f4344f7a3 HTTP/1.1
+PUT http://localhost:8080/table-value-source/ad5cf585-6d20-4e60-809b-9f5f4344f7a3 HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json
 
