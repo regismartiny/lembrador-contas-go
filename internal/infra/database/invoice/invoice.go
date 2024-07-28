@@ -10,13 +10,12 @@ import (
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/invoice_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type InvoiceEntityMongo struct {
 	Id        string                       `bson:"_id"`
-	Name      string                       `bson:"name"`
+	BillId    string                       `bson:"bill_id"`
 	DueDate   int64                        `bson:"due_date"`
 	Amount    int64                        `bson:"amount"`
 	Status    invoice_entity.InvoiceStatus `bson:"status"`
@@ -42,7 +41,7 @@ func (ur *InvoiceRepository) CreateInvoice(
 
 	InvoiceEntityMongo := &InvoiceEntityMongo{
 		Id:        invoiceEntity.Id,
-		Name:      invoiceEntity.Name,
+		BillId:    invoiceEntity.BillId,
 		DueDate:   invoiceEntity.DueDate.Unix(),
 		Amount:    int64(invoiceEntity.Amount * 100),
 		Status:    invoiceEntity.Status,
@@ -77,7 +76,7 @@ func (ur *InvoiceRepository) FindInvoiceById(
 
 	invoiceEntity := &invoice_entity.Invoice{
 		Id:        invoiceEntityMongo.Id,
-		Name:      invoiceEntityMongo.Name,
+		BillId:    invoiceEntityMongo.BillId,
 		DueDate:   time.Unix(invoiceEntityMongo.DueDate, 0),
 		Amount:    float64(invoiceEntityMongo.Amount / 100),
 		Status:    invoiceEntityMongo.Status,
@@ -90,16 +89,16 @@ func (ur *InvoiceRepository) FindInvoiceById(
 
 func (repo *InvoiceRepository) FindInvoices(
 	ctx context.Context,
-	status invoice_entity.InvoiceStatus,
-	name string) ([]invoice_entity.Invoice, *internal_error.InternalError) {
+	billId string,
+	status invoice_entity.InvoiceStatus) ([]invoice_entity.Invoice, *internal_error.InternalError) {
 	filter := bson.M{}
+
+	if billId != "" {
+		filter["bill_id"] = billId
+	}
 
 	if status != 0 {
 		filter["status"] = status
-	}
-
-	if name != "" {
-		filter["name"] = primitive.Regex{Pattern: name, Options: "i"}
 	}
 
 	cursor, err := repo.Collection.Find(ctx, filter)
@@ -119,7 +118,7 @@ func (repo *InvoiceRepository) FindInvoices(
 	for _, invoice := range invoicesMongo {
 		invoicesEntity = append(invoicesEntity, invoice_entity.Invoice{
 			Id:        invoice.Id,
-			Name:      invoice.Name,
+			BillId:    invoice.BillId,
 			DueDate:   time.Unix(invoice.DueDate, 0),
 			Amount:    float64(invoice.Amount) / 100,
 			Status:    invoice.Status,
@@ -129,4 +128,33 @@ func (repo *InvoiceRepository) FindInvoices(
 	}
 
 	return invoicesEntity, nil
+}
+
+func (repo *InvoiceRepository) DeleteInvoices(
+	ctx context.Context,
+	billId string,
+	status invoice_entity.InvoiceStatus,
+	dueDate time.Time) (uint, *internal_error.InternalError) {
+
+	filter := bson.M{}
+
+	if billId != "" {
+		filter["bill_id"] = billId
+	}
+
+	if status != 0 {
+		filter["status"] = status
+	}
+
+	if dueDate != (time.Time{}) {
+		filter["due_date"] = dueDate
+	}
+
+	result, err := repo.Collection.DeleteMany(ctx, filter)
+	if err != nil {
+		logger.Error("Error deleting invoices", err)
+		return 0, internal_error.NewInternalServerError("Error deleting invoices")
+	}
+
+	return uint(result.DeletedCount), nil
 }

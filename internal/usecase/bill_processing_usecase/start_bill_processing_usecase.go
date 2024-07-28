@@ -62,6 +62,11 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 	ctx context.Context,
 	billProcessingInput BillProcessingInputDTO) (StartBillProcessingOutputDTO, *internal_error.InternalError) {
 
+	if err := u.verifyNoProcessingInProgress(ctx); err != nil {
+		log.Println("Error trying to start bill processing", err)
+		return StartBillProcessingOutputDTO{}, err
+	}
+
 	billProcessing, err := bill_processing_entity.CreateBillProcessing("")
 	if err != nil {
 		return StartBillProcessingOutputDTO{}, err
@@ -76,6 +81,17 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 
 	return StartBillProcessingOutputDTO{
 		BillProcessingId: billProcessing.Id}, nil
+}
+
+func (u *BillProcessingUseCase) verifyNoProcessingInProgress(ctx context.Context) *internal_error.InternalError {
+	count, err := u.billProcessingRepository.GetProcessingsInProgressCount(ctx)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return internal_error.NewBadRequestError("There are already bill processings in progress")
+	}
+	return nil
 }
 
 func (u *BillProcessingUseCase) manageProcessingTimeot(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing) {
@@ -111,6 +127,7 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 	log.Printf("activeBills: %v", activeBills)
 
 	for _, bill := range activeBills {
+
 		if err := u.processBill(ctx, bill); err != nil {
 			log.Println("Error trying to process bill", err)
 			billProcessing.Status = bill_processing_entity.Error
@@ -127,6 +144,9 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 
 func (u *BillProcessingUseCase) processBill(ctx context.Context, bill bill_entity.Bill) *internal_error.InternalError {
 	log.Printf("Processing bill: %v", bill)
+
+	// Deleting all unpaid invoices of current bill
+	u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, time.Time{})
 
 	valueSourceId := bill.ValueSourceId
 	valueSourceType := bill.ValueSourceType

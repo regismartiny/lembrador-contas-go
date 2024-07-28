@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/regismartiny/lembrador-contas-go/configuration/logger"
@@ -111,6 +112,20 @@ func (repo *BillProcessingRepository) FindBillProcessings(
 	}
 
 	return billProcessingsEntity, nil
+}
+
+func (repo *BillProcessingRepository) GetProcessingsInProgressCount(
+	ctx context.Context) (int64, *internal_error.InternalError) {
+	filter := bson.M{}
+
+	filter["status"] = bill_processing_entity.Started
+
+	count, err := repo.Collection.CountDocuments(ctx, filter)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return count, nil
 }
 
 func (repo *BillProcessingRepository) UpdateBillProcessing(

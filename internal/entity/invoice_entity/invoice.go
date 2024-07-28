@@ -10,7 +10,7 @@ import (
 
 type Invoice struct {
 	Id        string
-	Name      string
+	BillId    string
 	DueDate   time.Time
 	Amount    float64
 	Status    InvoiceStatus
@@ -46,7 +46,7 @@ func GetInvoiceStatusByName(name string) (InvoiceStatus, *internal_error.Interna
 }
 
 func CreateInvoice(
-	name string,
+	billId string,
 	dueDate string,
 	amount float64,
 	status string) (*Invoice, *internal_error.InternalError) {
@@ -71,7 +71,7 @@ func CreateInvoice(
 	invoice :=
 		&Invoice{
 			Id:        uuid.New().String(),
-			Name:      name,
+			BillId:    billId,
 			DueDate:   parsedDueDate,
 			Amount:    amount,
 			Status:    invoiceStatus,
@@ -87,7 +87,7 @@ func CreateInvoice(
 }
 
 func (invoice *Invoice) Validate() *internal_error.InternalError {
-	if len(invoice.Name) < 3 {
+	if uuid.Validate(invoice.BillId) == nil {
 		return internal_error.NewBadRequestError("invalid invoice object")
 	}
 
@@ -99,6 +99,11 @@ type InvoiceRepositoryInterface interface {
 	FindInvoiceById(ctx context.Context, invoiceId string) (*Invoice, *internal_error.InternalError)
 	FindInvoices(
 		ctx context.Context,
+		billId string,
+		status InvoiceStatus) ([]Invoice, *internal_error.InternalError)
+	DeleteInvoices(
+		ctx context.Context,
+		billId string,
 		status InvoiceStatus,
-		name string) ([]Invoice, *internal_error.InternalError)
+		dueDate time.Time) (uint, *internal_error.InternalError)
 }

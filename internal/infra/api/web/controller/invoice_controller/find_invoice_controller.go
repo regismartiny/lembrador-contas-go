@@ -34,8 +34,8 @@ func (u *InvoiceController) FindInvoiceById(c *gin.Context) {
 }
 
 func (u *InvoiceController) FindInvoices(c *gin.Context) {
+	billId := c.Query("billId")
 	status := c.Query("status")
-	name := c.Query("name")
 
 	invoiceStatus, err := invoice_entity.GetInvoiceStatusByName(status)
 	if err != nil {
@@ -45,7 +45,7 @@ func (u *InvoiceController) FindInvoices(c *gin.Context) {
 	}
 
 	auctions, err := u.invoiceUseCase.FindInvoices(context.Background(),
-		invoiceStatus, name)
+		billId, invoiceStatus)
 	if err != nil {
 		errRest := rest_err.ConvertError(err)
 		c.JSON(errRest.Code, errRest)

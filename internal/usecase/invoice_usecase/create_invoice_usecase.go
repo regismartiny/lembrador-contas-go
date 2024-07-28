@@ -34,8 +34,8 @@ type InvoiceUseCaseInterface interface {
 		id string) (*InvoiceOutputDTO, *internal_error.InternalError)
 	FindInvoices(
 		ctx context.Context,
-		status invoice_entity.InvoiceStatus,
-		name string) ([]InvoiceOutputDTO, *internal_error.InternalError)
+		billId string,
+		status invoice_entity.InvoiceStatus) ([]InvoiceOutputDTO, *internal_error.InternalError)
 }
 
 type InvoiceUseCase struct {

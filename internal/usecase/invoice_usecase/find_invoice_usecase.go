@@ -16,7 +16,7 @@ func FindInvoiceUseCase(invoiceRepository invoice_entity.InvoiceRepositoryInterf
 
 type InvoiceOutputDTO struct {
 	Id        string    `json:"id"`
-	Name      string    `json:"name"`
+	BillId    string    `json:"billId"`
 	DueDate   time.Time `json:"dueDate"`
 	Amount    float64   `json:"amount"`
 	Status    string    `json:"status"`
@@ -33,7 +33,7 @@ func (u *InvoiceUseCase) FindInvoiceById(
 
 	return &InvoiceOutputDTO{
 		Id:        invoiceEntity.Id,
-		Name:      invoiceEntity.Name,
+		BillId:    invoiceEntity.BillId,
 		DueDate:   invoiceEntity.DueDate,
 		Amount:    invoiceEntity.Amount,
 		Status:    invoice_entity.InvoiceStatus(invoiceEntity.Status).Name(),
@@ -44,10 +44,10 @@ func (u *InvoiceUseCase) FindInvoiceById(
 
 func (u *InvoiceUseCase) FindInvoices(
 	ctx context.Context,
-	status invoice_entity.InvoiceStatus,
-	name string) ([]InvoiceOutputDTO, *internal_error.InternalError) {
+	billId string,
+	status invoice_entity.InvoiceStatus) ([]InvoiceOutputDTO, *internal_error.InternalError) {
 	invoiceEntities, err := u.invoiceRepository.FindInvoices(
-		ctx, status, name)
+		ctx, billId, status)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (u *InvoiceUseCase) FindInvoices(
 	for _, value := range invoiceEntities {
 		invoiceOutputs = append(invoiceOutputs, InvoiceOutputDTO{
 			Id:        value.Id,
-			Name:      value.Name,
+			BillId:    value.BillId,
 			DueDate:   value.DueDate,
 			Amount:    value.Amount,
 			Status:    invoice_entity.InvoiceStatus(value.Status).Name(),
