@@ -6,7 +6,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_processing_entity"
+	"github.com/regismartiny/lembrador-contas-go/internal/entity/email_value_source_entity"
+	"github.com/regismartiny/lembrador-contas-go/internal/entity/invoice_entity"
+	"github.com/regismartiny/lembrador-contas-go/internal/entity/table_value_source_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
 )
 
@@ -31,13 +35,26 @@ type BillProcessingUseCaseInterface interface {
 }
 
 type BillProcessingUseCase struct {
-	billProcessingRepository bill_processing_entity.BillProcessingRepositoryInterface
+	billProcessingRepository   bill_processing_entity.BillProcessingRepositoryInterface
+	billRepository             bill_entity.BillRepositoryInterface
+	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface
+	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface
+	invoiceRepository          invoice_entity.InvoiceRepositoryInterface
 }
 
 func NewBillProcessingUseCase(
-	billProcessingRepository bill_processing_entity.BillProcessingRepositoryInterface) BillProcessingUseCaseInterface {
+	billProcessingRepository bill_processing_entity.BillProcessingRepositoryInterface,
+	billRepository bill_entity.BillRepositoryInterface,
+	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface,
+	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface,
+	invoiceRepository invoice_entity.InvoiceRepositoryInterface) BillProcessingUseCaseInterface {
+
 	return &BillProcessingUseCase{
-		billProcessingRepository: billProcessingRepository,
+		billProcessingRepository:   billProcessingRepository,
+		billRepository:             billRepository,
+		tableValueSourceRepository: tableValueSourceRepository,
+		emailValueSourceRepository: emailValueSourceRepository,
+		invoiceRepository:          invoiceRepository,
 	}
 }
 
@@ -54,36 +71,118 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 		return StartBillProcessingOutputDTO{}, err
 	}
 
-	go func() {
-
-		go startProcessing()
-
-		processingTimeout := os.Getenv(PROCESSING_TIMEOUT_DURATION)
-		processingTimeoutDuration, _ := time.ParseDuration(processingTimeout)
-		time.Sleep(processingTimeoutDuration)
-
-		billProcessing, err := u.billProcessingRepository.FindBillProcessingById(ctx, billProcessing.Id)
-		if err != nil {
-			log.Println("Error trying to find billProcessing", err)
-			return
-		}
-
-		if !billProcessing.Status.IsFinished() {
-			log.Println("Bill processing timeout")
-			billProcessing.Status = bill_processing_entity.Timeout
-
-			if err := u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing); err != nil {
-				log.Println("Error trying to update billProcessing", err)
-			}
-		}
-
-	}()
+	go u.startProcessing(ctx, billProcessing)
+	go u.manageProcessingTimeot(ctx, billProcessing)
 
 	return StartBillProcessingOutputDTO{
 		BillProcessingId: billProcessing.Id}, nil
 }
 
-func startProcessing() {
+func (u *BillProcessingUseCase) manageProcessingTimeot(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing) {
+	processingTimeout := os.Getenv(PROCESSING_TIMEOUT_DURATION)
+	processingTimeoutDuration, _ := time.ParseDuration(processingTimeout)
+	time.Sleep(processingTimeoutDuration)
+
+	billProcessing, err := u.billProcessingRepository.FindBillProcessingById(ctx, billProcessing.Id)
+	if err != nil {
+		log.Println("Error trying to find billProcessing", err)
+		return
+	}
+
+	if !billProcessing.Status.IsFinished() {
+		log.Println("Bill processing timeout")
+		billProcessing.Status = bill_processing_entity.Timeout
+
+		if err := u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing); err != nil {
+			log.Println("Error trying to update billProcessing", err)
+		}
+	}
+}
+
+func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing) {
 	log.Println("Bill processing started")
 
+	activeBills, err := u.billRepository.FindBills(ctx, bill_entity.Active, "", "")
+	if err != nil {
+		log.Println("Error trying to find active bills", err)
+		return
+	}
+
+	log.Printf("activeBills: %v", activeBills)
+
+	for _, bill := range activeBills {
+		if err := u.processBill(ctx, bill); err != nil {
+			log.Println("Error trying to process bill", err)
+			billProcessing.Status = bill_processing_entity.Error
+			u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
+			return
+		}
+	}
+
+	log.Println("Bill processing finished successfully")
+
+	billProcessing.Status = bill_processing_entity.Success
+	u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
+}
+
+func (u *BillProcessingUseCase) processBill(ctx context.Context, bill bill_entity.Bill) *internal_error.InternalError {
+	log.Printf("Processing bill: %v", bill)
+
+	valueSourceId := bill.ValueSourceId
+	valueSourceType := bill.ValueSourceType
+
+	switch valueSourceType {
+	case bill_entity.Table:
+		tableValueSource, _ := u.tableValueSourceRepository.FindTableValueSourceById(ctx, valueSourceId)
+		return u.processTableValueSource(ctx, bill, tableValueSource)
+	case bill_entity.Email:
+		emailValueSource, _ := u.emailValueSourceRepository.FindEmailValueSourceById(ctx, valueSourceId)
+		return u.processEmailValueSource(ctx, bill, emailValueSource)
+	}
+
+	return nil
+}
+
+func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bill bill_entity.Bill,
+	tableValueSource *table_value_source_entity.TableValueSource) *internal_error.InternalError {
+
+	currentDate := time.Now().UTC()
+
+	log.Println("Today is", currentDate)
+	log.Println("Processing Bill", bill.Name, "for period", currentDate.Month(), "/", currentDate.Year())
+
+	amount := 0.0
+
+	for _, v := range tableValueSource.Data {
+		if v.Period.Month == uint8(currentDate.Month()) && v.Period.Year == uint16(currentDate.Year()) {
+			log.Printf("Found invoice for current month. Value: %2.f\n", v.Amount)
+			amount = v.Amount
+			break
+		}
+	}
+
+	if amount == 0.0 {
+		log.Println("No invoice found for current period")
+		return nil
+	}
+
+	invoiceDueDate := time.Date(currentDate.Year(), currentDate.Month(), int(bill.DueDay), 0, 0, 0, 0, time.UTC)
+
+	invoice, err := invoice_entity.CreateInvoice(
+		bill.Name,
+		invoiceDueDate.Format("2006-01-02"),
+		amount,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+
+	return u.invoiceRepository.CreateInvoice(ctx, invoice)
+}
+
+func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bill bill_entity.Bill,
+	emailValueSource *email_value_source_entity.EmailValueSource) *internal_error.InternalError {
+
+	return nil
 }

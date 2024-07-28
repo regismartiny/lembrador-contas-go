@@ -86,29 +86,30 @@ func initDependencies(ctx context.Context, database *mongo.Database) (
 		user_usecase.NewUserUseCase(userRepository))
 
 	billRepository := bill.NewBillRepository(ctx, database)
+	billUseCase := bill_usecase.NewBillUseCase(billRepository)
 
-	billController = bill_controller.NewBillController(
-		bill_usecase.NewBillUseCase(billRepository))
+	billController = bill_controller.NewBillController(billUseCase)
 
 	invoiceRepository := invoice.NewInvoiceRepository(ctx, database)
+	invoiceUseCase := invoice_usecase.NewInvoiceUseCase(invoiceRepository)
 
-	invoiceController := invoice_controller.NewInvoiceController(
-		invoice_usecase.NewInvoiceUseCase(invoiceRepository))
+	invoiceController := invoice_controller.NewInvoiceController(invoiceUseCase)
 
 	tableValueSourceRepository := table_value_source.NewTableValueSourceRepository(ctx, database)
+	tableValueSourceUseCase := table_value_source_usecase.NewTableValueSourceUseCase(tableValueSourceRepository)
 
-	tableValueSourceController = table_value_source_controller.NewTableValueSourceController(
-		table_value_source_usecase.NewTableValueSourceUseCase(tableValueSourceRepository))
+	tableValueSourceController = table_value_source_controller.NewTableValueSourceController(tableValueSourceUseCase)
 
 	emailValueSourceRepository := email_value_source.NewEmailValueSourceRepository(ctx, database)
+	emailValueSourceUseCase := email_value_source_usecase.NewEmailValueSourceUseCase(emailValueSourceRepository)
 
-	emailValueSourceController = email_value_source_controller.NewEmailValueSourceController(
-		email_value_source_usecase.NewEmailValueSourceUseCase(emailValueSourceRepository))
+	emailValueSourceController = email_value_source_controller.NewEmailValueSourceController(emailValueSourceUseCase)
 
 	billProcessingRepository := bill_processing.NewBillProcessingRepository(ctx, database)
 
 	billProcessingController = bill_processing_controller.NewBillProcessingController(
-		bill_processing_usecase.NewBillProcessingUseCase(billProcessingRepository))
+		bill_processing_usecase.NewBillProcessingUseCase(billProcessingRepository, billRepository, tableValueSourceRepository,
+			emailValueSourceRepository, invoiceRepository))
 
 	return userController, billController, invoiceController, tableValueSourceController, emailValueSourceController, billProcessingController
 }
