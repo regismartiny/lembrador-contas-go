@@ -12,6 +12,7 @@ import (
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/invoice_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/table_value_source_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
+	"google.golang.org/api/gmail/v1"
 )
 
 const (
@@ -40,6 +41,7 @@ type BillProcessingUseCase struct {
 	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface
 	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface
 	invoiceRepository          invoice_entity.InvoiceRepositoryInterface
+	gmailService               *gmail.Service
 }
 
 func NewBillProcessingUseCase(
@@ -47,7 +49,8 @@ func NewBillProcessingUseCase(
 	billRepository bill_entity.BillRepositoryInterface,
 	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface,
 	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface,
-	invoiceRepository invoice_entity.InvoiceRepositoryInterface) BillProcessingUseCaseInterface {
+	invoiceRepository invoice_entity.InvoiceRepositoryInterface,
+	gmailService *gmail.Service) BillProcessingUseCaseInterface {
 
 	return &BillProcessingUseCase{
 		billProcessingRepository:   billProcessingRepository,
@@ -55,6 +58,7 @@ func NewBillProcessingUseCase(
 		tableValueSourceRepository: tableValueSourceRepository,
 		emailValueSourceRepository: emailValueSourceRepository,
 		invoiceRepository:          invoiceRepository,
+		gmailService:               gmailService,
 	}
 }
 
@@ -62,10 +66,10 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 	ctx context.Context,
 	billProcessingInput BillProcessingInputDTO) (StartBillProcessingOutputDTO, *internal_error.InternalError) {
 
-	if err := u.verifyNoProcessingInProgress(ctx); err != nil {
-		log.Println("Error trying to start bill processing", err)
-		return StartBillProcessingOutputDTO{}, err
-	}
+	// if err := u.verifyNoProcessingInProgress(ctx); err != nil {
+	// 	log.Println("Error trying to start bill processing", err)
+	// 	return StartBillProcessingOutputDTO{}, err
+	// }
 
 	billProcessing, err := bill_processing_entity.CreateBillProcessing("")
 	if err != nil {
@@ -153,10 +157,18 @@ func (u *BillProcessingUseCase) processBill(ctx context.Context, bill bill_entit
 
 	switch valueSourceType {
 	case bill_entity.Table:
-		tableValueSource, _ := u.tableValueSourceRepository.FindTableValueSourceById(ctx, valueSourceId)
+		tableValueSource, err := u.tableValueSourceRepository.FindTableValueSourceById(ctx, valueSourceId)
+		if err != nil {
+			log.Println("Error trying to find table value source:", err)
+			return err
+		}
 		return u.processTableValueSource(ctx, bill, tableValueSource)
 	case bill_entity.Email:
-		emailValueSource, _ := u.emailValueSourceRepository.FindEmailValueSourceById(ctx, valueSourceId)
+		emailValueSource, err := u.emailValueSourceRepository.FindEmailValueSourceById(ctx, valueSourceId)
+		if err != nil {
+			log.Println("Error trying to find email value source:", err)
+			return err
+		}
 		return u.processEmailValueSource(ctx, bill, emailValueSource)
 	}
 
@@ -203,6 +215,34 @@ func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bil
 
 func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bill bill_entity.Bill,
 	emailValueSource *email_value_source_entity.EmailValueSource) *internal_error.InternalError {
+
+	log.Println("Processing email value source. Address:", emailValueSource.Address, "Subject:", emailValueSource.Subject)
+
+	today := time.Now().UTC()
+	year := today.Year()
+	month := today.Month()
+	startDate := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC).Format("2006/01/02")
+	endDate := time.Date(year, month, 31, 0, 0, 0, 0, time.UTC).Format("2006/01/02")
+	query := "from:" + emailValueSource.Address + " subject:\"" + emailValueSource.Subject + "\" after:" + startDate + " before:" + endDate
+	log.Println("Query:", query)
+	mes, err := u.gmailService.Users.Messages.List("me").Q(query).Do()
+	if err != nil {
+		log.Printf("Error Listing emails: %v", err)
+		return internal_error.NewInternalServerError("Error listing emails")
+	}
+
+	log.Printf("Found %d messages. Using first message", len(mes.Messages))
+
+	message := mes.Messages[0]
+
+	msg, err := u.gmailService.Users.Messages.Get("me", message.Id).Do()
+	if err != nil {
+		log.Printf("Error getting message: %v", err)
+	}
+
+	for _, h := range msg.Payload.Headers {
+		log.Println("Header", h.Value)
+	}
 
 	return nil
 }
