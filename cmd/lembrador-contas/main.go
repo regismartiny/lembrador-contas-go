@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/regismartiny/lembrador-contas-go/configuration/database/mongodb"
+	"github.com/regismartiny/lembrador-contas-go/internal/email_service"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/bill_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/bill_processing_controller"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/controller/email_value_source_controller"
@@ -103,8 +104,9 @@ func initDependencies(ctx context.Context, database *mongo.Database, gmailServic
 	emailValueSourceController := email_value_source_controller.NewEmailValueSourceController(emailValueSourceUseCase)
 
 	billProcessingRepository := bill_processing.NewBillProcessingRepository(ctx, database)
+	emailService := email_service.NewGmailEmailService(gmailService)
 	billProcessingUseCase := bill_processing_usecase.NewBillProcessingUseCase(billProcessingRepository, billRepository, tableValueSourceRepository,
-		emailValueSourceRepository, invoiceRepository, gmailService)
+		emailValueSourceRepository, invoiceRepository, emailService)
 	billProcessingController := bill_processing_controller.NewBillProcessingController(billProcessingUseCase)
 
 	return &Dependencies{

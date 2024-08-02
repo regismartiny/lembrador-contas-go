@@ -6,13 +6,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/regismartiny/lembrador-contas-go/internal/data_extractor/email_data_extractor"
+	"github.com/regismartiny/lembrador-contas-go/internal/email_service"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_processing_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/email_value_source_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/invoice_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/entity/table_value_source_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/internal_error"
-	"google.golang.org/api/gmail/v1"
 )
 
 const (
@@ -41,7 +42,7 @@ type BillProcessingUseCase struct {
 	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface
 	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface
 	invoiceRepository          invoice_entity.InvoiceRepositoryInterface
-	gmailService               *gmail.Service
+	emailService               email_service.EmailServiceInterface
 }
 
 func NewBillProcessingUseCase(
@@ -50,7 +51,7 @@ func NewBillProcessingUseCase(
 	tableValueSourceRepository table_value_source_entity.TableValueSourceRepositoryInterface,
 	emailValueSourceRepository email_value_source_entity.EmailValueSourceRepositoryInterface,
 	invoiceRepository invoice_entity.InvoiceRepositoryInterface,
-	gmailService *gmail.Service) BillProcessingUseCaseInterface {
+	emailService email_service.EmailServiceInterface) BillProcessingUseCaseInterface {
 
 	return &BillProcessingUseCase{
 		billProcessingRepository:   billProcessingRepository,
@@ -58,7 +59,7 @@ func NewBillProcessingUseCase(
 		tableValueSourceRepository: tableValueSourceRepository,
 		emailValueSourceRepository: emailValueSourceRepository,
 		invoiceRepository:          invoiceRepository,
-		gmailService:               gmailService,
+		emailService:               emailService,
 	}
 }
 
@@ -198,6 +199,14 @@ func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bil
 		return nil
 	}
 
+	return u.createInvoice(ctx, bill, amount)
+}
+
+func (u *BillProcessingUseCase) createInvoice(ctx context.Context, bill bill_entity.Bill, amount float64) *internal_error.InternalError {
+	log.Println("Creating invoice")
+
+	currentDate := time.Now().UTC()
+
 	invoiceDueDate := time.Date(currentDate.Year(), currentDate.Month(), int(bill.DueDay), 0, 0, 0, 0, time.UTC)
 
 	invoice, err := invoice_entity.CreateInvoice(
@@ -218,31 +227,25 @@ func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bil
 
 	log.Println("Processing email value source. Address:", emailValueSource.Address, "Subject:", emailValueSource.Subject)
 
+	dataExtractor := email_data_extractor.NewEmailDataExtractor(u.emailService, emailValueSource.DataExtractor)
+
 	today := time.Now().UTC()
 	year := today.Year()
-	month := today.Month()
-	startDate := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC).Format("2006/01/02")
-	endDate := time.Date(year, month, 31, 0, 0, 0, 0, time.UTC).Format("2006/01/02")
-	query := "from:" + emailValueSource.Address + " subject:\"" + emailValueSource.Subject + "\" after:" + startDate + " before:" + endDate
-	log.Println("Query:", query)
-	mes, err := u.gmailService.Users.Messages.List("me").Q(query).Do()
+	month := today.Month() - 1 // previous month //TODO: should be configurable
+	startDate := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(year, month, 31, 0, 0, 0, 0, time.UTC) //TODO: get last day of month
+
+	dataExtractorResponse, err := dataExtractor.Extract(email_data_extractor.EmailDataExtractorRequest{
+		Subject:   emailValueSource.Subject,
+		Address:   emailValueSource.Address,
+		StartDate: startDate,
+		EndDate:   endDate,
+	})
 	if err != nil {
-		log.Printf("Error Listing emails: %v", err)
-		return internal_error.NewInternalServerError("Error listing emails")
+		return err
 	}
 
-	log.Printf("Found %d messages. Using first message", len(mes.Messages))
-
-	message := mes.Messages[0]
-
-	msg, err := u.gmailService.Users.Messages.Get("me", message.Id).Do()
-	if err != nil {
-		log.Printf("Error getting message: %v", err)
-	}
-
-	for _, h := range msg.Payload.Headers {
-		log.Println("Header", h.Value)
-	}
+	u.createInvoice(ctx, bill, dataExtractorResponse.Amount)
 
 	return nil
 }
