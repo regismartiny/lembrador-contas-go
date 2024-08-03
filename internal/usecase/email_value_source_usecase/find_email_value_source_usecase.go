@@ -42,23 +42,23 @@ func (u *EmailValueSourceUseCase) FindEmailValueSourceById(
 
 func (u *EmailValueSourceUseCase) FindEmailValueSources(
 	ctx context.Context,
-	address, subject string) ([]EmailValueSourceOutputDTO, *internal_error.InternalError) {
+	address, subject string) ([]*EmailValueSourceOutputDTO, *internal_error.InternalError) {
 	emailValueSourceEntities, err := u.emailValueSourceRepository.FindEmailValueSources(
 		ctx, address, subject)
 	if err != nil {
 		return nil, err
 	}
 
-	var emailValueSourceOutputs []EmailValueSourceOutputDTO
-	for _, value := range emailValueSourceEntities {
-		emailValueSourceOutputs = append(emailValueSourceOutputs, EmailValueSourceOutputDTO{
+	emailValueSourceOutputs := make([]*EmailValueSourceOutputDTO, len(emailValueSourceEntities))
+	for i, value := range emailValueSourceEntities {
+		emailValueSourceOutputs[i] = &EmailValueSourceOutputDTO{
 			Id:            value.Id,
 			Address:       value.Address,
 			Subject:       value.Subject,
 			DataExtractor: email_value_source_entity.EmailValueSourceDataExtractor(value.DataExtractor).Name(),
 			CreatedAt:     value.CreatedAt,
 			UpdatedAt:     value.UpdatedAt,
-		})
+		}
 	}
 
 	return emailValueSourceOutputs, nil

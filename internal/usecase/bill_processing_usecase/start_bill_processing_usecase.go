@@ -34,6 +34,9 @@ type BillProcessingUseCaseInterface interface {
 	GetBillProcessingStatus(
 		ctx context.Context,
 		billProcessingId string) (GetBillProcessingStatusOutputDTO, *internal_error.InternalError)
+	FindBillProcessings(
+		ctx context.Context,
+		status bill_processing_entity.BillProcessingStatus) ([]*FindBillProcessingOutputDTO, *internal_error.InternalError)
 }
 
 type BillProcessingUseCase struct {
@@ -67,10 +70,10 @@ func (u *BillProcessingUseCase) StartBillProcessing(
 	ctx context.Context,
 	billProcessingInput BillProcessingInputDTO) (StartBillProcessingOutputDTO, *internal_error.InternalError) {
 
-	// if err := u.verifyNoProcessingInProgress(ctx); err != nil {
-	// 	log.Println("Error trying to start bill processing", err)
-	// 	return StartBillProcessingOutputDTO{}, err
-	// }
+	if err := u.verifyNoProcessingInProgress(ctx); err != nil {
+		log.Println("Error trying to start bill processing", err)
+		return StartBillProcessingOutputDTO{}, err
+	}
 
 	billProcessing, err := bill_processing_entity.CreateBillProcessing("")
 	if err != nil {
@@ -129,8 +132,6 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 		return
 	}
 
-	log.Printf("activeBills: %v", activeBills)
-
 	for _, bill := range activeBills {
 
 		if err := u.processBill(ctx, bill); err != nil {
@@ -147,11 +148,11 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 	u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
 }
 
-func (u *BillProcessingUseCase) processBill(ctx context.Context, bill bill_entity.Bill) *internal_error.InternalError {
+func (u *BillProcessingUseCase) processBill(ctx context.Context, bill *bill_entity.Bill) *internal_error.InternalError {
 	log.Printf("Processing bill: %v", bill)
 
 	// Deleting all unpaid invoices of current bill
-	u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, time.Time{})
+	u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, "")
 
 	valueSourceId := bill.ValueSourceId
 	valueSourceType := bill.ValueSourceType
@@ -171,24 +172,28 @@ func (u *BillProcessingUseCase) processBill(ctx context.Context, bill bill_entit
 			return err
 		}
 		return u.processEmailValueSource(ctx, bill, emailValueSource)
+	case bill_entity.API:
+		return internal_error.NewInternalServerError("valueSourceType API not implemented yet")
 	}
 
 	return nil
 }
 
-func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bill bill_entity.Bill,
+func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bill *bill_entity.Bill,
 	tableValueSource *table_value_source_entity.TableValueSource) *internal_error.InternalError {
 
-	currentDate := time.Now().UTC()
+	now := time.Now()
+	dueDate := time.Date(now.Year(), now.Month(), int(bill.DueDay), 0, 0, 0, 0, time.Local)
+	processingDate := dueDate.AddDate(0, -1, 0) // always process previous month
 
-	log.Println("Today is", currentDate)
-	log.Println("Processing Bill", bill.Name, "for period", currentDate.Month(), "/", currentDate.Year())
+	log.Println("Today is", now.Format("02/01/2006"))
+	log.Println("Processing Bill", bill.Name, "for period", processingDate.Month(), "/", now.Year())
 
 	amount := 0.0
 
 	for _, v := range tableValueSource.Data {
-		if v.Period.Month == uint8(currentDate.Month()) && v.Period.Year == uint16(currentDate.Year()) {
-			log.Printf("Found invoice for current month. Value: %2.f\n", v.Amount)
+		if v.Period.Month == uint8(processingDate.Month()) && v.Period.Year == uint16(processingDate.Year()) {
+			log.Printf("Found data for current period. Value: %2.f\n", v.Amount)
 			amount = v.Amount
 			break
 		}
@@ -199,19 +204,15 @@ func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bil
 		return nil
 	}
 
-	return u.createInvoice(ctx, bill, amount)
+	return u.createInvoice(ctx, bill, dueDate, amount)
 }
 
-func (u *BillProcessingUseCase) createInvoice(ctx context.Context, bill bill_entity.Bill, amount float64) *internal_error.InternalError {
+func (u *BillProcessingUseCase) createInvoice(ctx context.Context, bill *bill_entity.Bill, dueDate time.Time, amount float64) *internal_error.InternalError {
 	log.Println("Creating invoice")
-
-	currentDate := time.Now().UTC()
-
-	invoiceDueDate := time.Date(currentDate.Year(), currentDate.Month(), int(bill.DueDay), 0, 0, 0, 0, time.UTC)
 
 	invoice, err := invoice_entity.CreateInvoice(
 		bill.Name,
-		invoiceDueDate.Format("2006-01-02"),
+		dueDate.Format("2006-01-02"),
 		amount,
 		"",
 	)
@@ -222,18 +223,19 @@ func (u *BillProcessingUseCase) createInvoice(ctx context.Context, bill bill_ent
 	return u.invoiceRepository.CreateInvoice(ctx, invoice)
 }
 
-func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bill bill_entity.Bill,
+func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bill *bill_entity.Bill,
 	emailValueSource *email_value_source_entity.EmailValueSource) *internal_error.InternalError {
 
 	log.Println("Processing email value source. Address:", emailValueSource.Address, "Subject:", emailValueSource.Subject)
 
 	dataExtractor := email_data_extractor.NewEmailDataExtractor(u.emailService, emailValueSource.DataExtractor)
 
-	today := time.Now().UTC()
-	year := today.Year()
-	month := today.Month() - 1 // previous month //TODO: should be configurable
-	startDate := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-	endDate := time.Date(year, month, 31, 0, 0, 0, 0, time.UTC) //TODO: get last day of month
+	now := time.Now()
+	dueDate := time.Date(now.Year(), now.Month(), int(bill.DueDay), 0, 0, 0, 0, time.Local)
+	processingDate := dueDate.AddDate(0, -1, 0) // always process previous month
+
+	startDate := time.Date(processingDate.Year(), processingDate.Month(), 1, 0, 0, 0, 0, time.Local)
+	endDate := startDate.AddDate(0, 1, -1) //last day of month
 
 	dataExtractorResponse, err := dataExtractor.Extract(email_data_extractor.EmailDataExtractorRequest{
 		Subject:   emailValueSource.Subject,
@@ -245,7 +247,7 @@ func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bil
 		return err
 	}
 
-	u.createInvoice(ctx, bill, dataExtractorResponse.Amount)
+	u.createInvoice(ctx, bill, dueDate, dataExtractorResponse.Amount)
 
 	return nil
 }

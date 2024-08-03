@@ -125,7 +125,7 @@ func (ur *TableValueSourceRepository) FindTableValueSourceById(
 func (repo *TableValueSourceRepository) FindTableValueSources(
 	ctx context.Context,
 	status table_value_source_entity.TableValueSourceStatus,
-	name string) ([]table_value_source_entity.TableValueSource, *internal_error.InternalError) {
+	name string) ([]*table_value_source_entity.TableValueSource, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if status != 0 {
@@ -149,16 +149,16 @@ func (repo *TableValueSourceRepository) FindTableValueSources(
 		return nil, internal_error.NewInternalServerError("Error decoding tableValueSources")
 	}
 
-	var tableValueSourcesEntity []table_value_source_entity.TableValueSource
-	for _, tableValueSource := range tableValueSourcesMongo {
-		tableValueSourcesEntity = append(tableValueSourcesEntity, table_value_source_entity.TableValueSource{
+	tableValueSourcesEntity := make([]*table_value_source_entity.TableValueSource, len(tableValueSourcesMongo))
+	for i, tableValueSource := range tableValueSourcesMongo {
+		tableValueSourcesEntity[i] = &table_value_source_entity.TableValueSource{
 			Id:        tableValueSource.Id,
 			Name:      tableValueSource.Name,
 			Data:      tableValueSource.Data,
 			Status:    tableValueSource.Status,
 			CreatedAt: time.Unix(tableValueSource.CreatedAt, 0),
 			UpdatedAt: time.Unix(tableValueSource.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return tableValueSourcesEntity, nil

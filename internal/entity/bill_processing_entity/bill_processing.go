@@ -116,4 +116,7 @@ type BillProcessingRepositoryInterface interface {
 		ctx context.Context, billProcessingId string) (*BillProcessing, *internal_error.InternalError)
 	GetProcessingsInProgressCount(
 		ctx context.Context) (int64, *internal_error.InternalError)
+	FindBillProcessings(
+		ctx context.Context,
+		status BillProcessingStatus) ([]*BillProcessing, *internal_error.InternalError)
 }

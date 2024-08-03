@@ -141,6 +141,6 @@ type TableValueSourceRepositoryInterface interface {
 	FindTableValueSources(
 		ctx context.Context,
 		status TableValueSourceStatus,
-		name string) ([]TableValueSource, *internal_error.InternalError)
+		name string) ([]*TableValueSource, *internal_error.InternalError)
 	UpdateTableValueSource(ctx context.Context, tableValueSourceEntity *TableValueSource) *internal_error.InternalError
 }

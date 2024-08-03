@@ -102,7 +102,7 @@ func (repo *UserRepository) FindUsers(
 	ctx context.Context,
 	status user_entity.UserStatus,
 	name string,
-	email string) ([]user_entity.User, *internal_error.InternalError) {
+	email string) ([]*user_entity.User, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if status != 0 {
@@ -130,16 +130,16 @@ func (repo *UserRepository) FindUsers(
 		return nil, internal_error.NewInternalServerError("Error decoding users")
 	}
 
-	var usersEntity []user_entity.User
-	for _, user := range usersMongo {
-		usersEntity = append(usersEntity, user_entity.User{
+	usersEntity := make([]*user_entity.User, len(usersMongo))
+	for i, user := range usersMongo {
+		usersEntity[i] = &user_entity.User{
 			Id:        user.Id,
 			Name:      user.Name,
 			Email:     user.Email,
 			Status:    user.Status,
 			CreatedAt: time.Unix(user.CreatedAt, 0),
 			UpdatedAt: time.Unix(user.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return usersEntity, nil

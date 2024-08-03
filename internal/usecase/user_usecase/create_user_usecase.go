@@ -32,7 +32,7 @@ type UserUseCaseInterface interface {
 	FindUsers(
 		ctx context.Context,
 		status user_entity.UserStatus,
-		name, email string) ([]UserOutputDTO, *internal_error.InternalError)
+		name, email string) ([]*UserOutputDTO, *internal_error.InternalError)
 }
 
 type UserUseCase struct {

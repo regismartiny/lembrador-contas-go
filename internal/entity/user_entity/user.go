@@ -80,5 +80,5 @@ type UserRepositoryInterface interface {
 	FindUsers(
 		ctx context.Context,
 		status UserStatus,
-		name, email string) ([]User, *internal_error.InternalError)
+		name, email string) ([]*User, *internal_error.InternalError)
 }

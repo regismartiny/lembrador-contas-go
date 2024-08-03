@@ -23,7 +23,7 @@ type EmailValueSourceUseCaseInterface interface {
 	FindEmailValueSources(
 		ctx context.Context,
 		address string,
-		subject string) ([]EmailValueSourceOutputDTO, *internal_error.InternalError)
+		subject string) ([]*EmailValueSourceOutputDTO, *internal_error.InternalError)
 	UpdateEmailValueSource(
 		ctx context.Context,
 		id string,

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/regismartiny/lembrador-contas-go/configuration/rest_err"
+	"github.com/regismartiny/lembrador-contas-go/internal/entity/bill_processing_entity"
 	"github.com/regismartiny/lembrador-contas-go/internal/infra/api/web/validation"
 	"github.com/regismartiny/lembrador-contas-go/internal/usecase/bill_processing_usecase"
 )
@@ -53,4 +54,24 @@ func (u *BillProcessingController) GetBillProcessingStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, status)
+}
+
+func (u *BillProcessingController) FindBillProcessings(c *gin.Context) {
+	status := c.Query("status")
+
+	billStatus, err := bill_processing_entity.GetBillProcessingStatusByName(status)
+	if err != nil {
+		errRest := rest_err.NewBadRequestError("Error trying to validate billProcessing status param")
+		c.JSON(errRest.Code, errRest)
+		return
+	}
+
+	billProcessings, err := u.billProcessingUseCase.FindBillProcessings(context.Background(), billStatus)
+	if err != nil {
+		errRest := rest_err.ConvertError(err)
+		c.JSON(errRest.Code, errRest)
+		return
+	}
+
+	c.JSON(http.StatusOK, billProcessings)
 }

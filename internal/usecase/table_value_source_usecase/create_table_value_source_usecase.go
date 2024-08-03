@@ -33,7 +33,7 @@ type TableValueSourceUseCaseInterface interface {
 	FindTableValueSources(
 		ctx context.Context,
 		status table_value_source_entity.TableValueSourceStatus,
-		name string) ([]TableValueSourceOutputDTO, *internal_error.InternalError)
+		name string) ([]*TableValueSourceOutputDTO, *internal_error.InternalError)
 	UpdateTableValueSource(
 		ctx context.Context,
 		id string,

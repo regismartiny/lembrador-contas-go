@@ -142,5 +142,5 @@ type BillRepositoryInterface interface {
 	FindBills(
 		ctx context.Context,
 		status BillStatus,
-		name, company string) ([]Bill, *internal_error.InternalError)
+		name, company string) ([]*Bill, *internal_error.InternalError)
 }

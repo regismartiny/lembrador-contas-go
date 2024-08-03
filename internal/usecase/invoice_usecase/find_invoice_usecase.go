@@ -17,7 +17,7 @@ func FindInvoiceUseCase(invoiceRepository invoice_entity.InvoiceRepositoryInterf
 type InvoiceOutputDTO struct {
 	Id        string    `json:"id"`
 	BillId    string    `json:"billId"`
-	DueDate   time.Time `json:"dueDate"`
+	DueDate   string    `json:"dueDate"`
 	Amount    float64   `json:"amount"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"createdAt" time_format:"2006-01-02 15:04:05"`
@@ -45,16 +45,16 @@ func (u *InvoiceUseCase) FindInvoiceById(
 func (u *InvoiceUseCase) FindInvoices(
 	ctx context.Context,
 	billId string,
-	status invoice_entity.InvoiceStatus) ([]InvoiceOutputDTO, *internal_error.InternalError) {
+	status invoice_entity.InvoiceStatus) ([]*InvoiceOutputDTO, *internal_error.InternalError) {
 	invoiceEntities, err := u.invoiceRepository.FindInvoices(
 		ctx, billId, status)
 	if err != nil {
 		return nil, err
 	}
 
-	var invoiceOutputs []InvoiceOutputDTO
-	for _, value := range invoiceEntities {
-		invoiceOutputs = append(invoiceOutputs, InvoiceOutputDTO{
+	invoiceOutputs := make([]*InvoiceOutputDTO, len(invoiceEntities))
+	for i, value := range invoiceEntities {
+		invoiceOutputs[i] = &InvoiceOutputDTO{
 			Id:        value.Id,
 			BillId:    value.BillId,
 			DueDate:   value.DueDate,
@@ -62,7 +62,7 @@ func (u *InvoiceUseCase) FindInvoices(
 			Status:    invoice_entity.InvoiceStatus(value.Status).Name(),
 			CreatedAt: value.CreatedAt,
 			UpdatedAt: value.UpdatedAt,
-		})
+		}
 	}
 
 	return invoiceOutputs, nil

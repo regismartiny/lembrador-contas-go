@@ -11,7 +11,7 @@ import (
 type Invoice struct {
 	Id        string
 	BillId    string
-	DueDate   time.Time
+	DueDate   string
 	Amount    float64
 	Status    InvoiceStatus
 	CreatedAt time.Time
@@ -63,16 +63,11 @@ func CreateInvoice(
 		invoiceStatus = status
 	}
 
-	parsedDueDate, err := time.Parse("2006-01-02", dueDate)
-	if err != nil {
-		return nil, internal_error.NewBadRequestError("invalid due date")
-	}
-
 	invoice :=
 		&Invoice{
 			Id:        uuid.New().String(),
 			BillId:    billId,
-			DueDate:   parsedDueDate,
+			DueDate:   dueDate,
 			Amount:    amount,
 			Status:    invoiceStatus,
 			CreatedAt: time.Now(),
@@ -88,7 +83,10 @@ func CreateInvoice(
 
 func (invoice *Invoice) Validate() *internal_error.InternalError {
 	if uuid.Validate(invoice.BillId) == nil {
-		return internal_error.NewBadRequestError("invalid invoice object")
+		return internal_error.NewBadRequestError("invalid invoice object. invalid bill id")
+	}
+	if _, err := time.Parse("2006-01-02", invoice.DueDate); err != nil {
+		return internal_error.NewBadRequestError("invalid invoice object. invalid due date")
 	}
 
 	return nil
@@ -100,10 +98,10 @@ type InvoiceRepositoryInterface interface {
 	FindInvoices(
 		ctx context.Context,
 		billId string,
-		status InvoiceStatus) ([]Invoice, *internal_error.InternalError)
+		status InvoiceStatus) ([]*Invoice, *internal_error.InternalError)
 	DeleteInvoices(
 		ctx context.Context,
 		billId string,
 		status InvoiceStatus,
-		dueDate time.Time) (uint, *internal_error.InternalError)
+		dueDate string) (uint, *internal_error.InternalError)
 }

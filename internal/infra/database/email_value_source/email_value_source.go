@@ -124,7 +124,7 @@ func (ur *EmailValueSourceRepository) FindEmailValueSourceById(
 
 func (repo *EmailValueSourceRepository) FindEmailValueSources(
 	ctx context.Context,
-	address, subject string) ([]email_value_source_entity.EmailValueSource, *internal_error.InternalError) {
+	address, subject string) ([]*email_value_source_entity.EmailValueSource, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if address != "" {
@@ -148,16 +148,15 @@ func (repo *EmailValueSourceRepository) FindEmailValueSources(
 		return nil, internal_error.NewInternalServerError("Error decoding emailValueSources")
 	}
 
-	var emailValueSourcesEntity []email_value_source_entity.EmailValueSource
-	for _, emailValueSource := range emailValueSourcesMongo {
-		emailValueSourcesEntity = append(emailValueSourcesEntity, email_value_source_entity.EmailValueSource{
-			Id:            emailValueSource.Id,
+	emailValueSourcesEntity := make([]*email_value_source_entity.EmailValueSource, len(emailValueSourcesMongo))
+	for i, emailValueSource := range emailValueSourcesMongo {
+		emailValueSourcesEntity[i] = &email_value_source_entity.EmailValueSource{
 			Address:       emailValueSource.Address,
 			Subject:       emailValueSource.Subject,
 			DataExtractor: emailValueSource.DataExtractor,
 			CreatedAt:     time.Unix(emailValueSource.CreatedAt, 0),
 			UpdatedAt:     time.Unix(emailValueSource.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return emailValueSourcesEntity, nil

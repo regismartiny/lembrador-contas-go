@@ -16,7 +16,7 @@ import (
 type InvoiceEntityMongo struct {
 	Id        string                       `bson:"_id"`
 	BillId    string                       `bson:"bill_id"`
-	DueDate   int64                        `bson:"due_date"`
+	DueDate   string                       `bson:"due_date"`
 	Amount    int64                        `bson:"amount"`
 	Status    invoice_entity.InvoiceStatus `bson:"status"`
 	CreatedAt int64                        `bson:"created_at"`
@@ -42,7 +42,7 @@ func (ur *InvoiceRepository) CreateInvoice(
 	InvoiceEntityMongo := &InvoiceEntityMongo{
 		Id:        invoiceEntity.Id,
 		BillId:    invoiceEntity.BillId,
-		DueDate:   invoiceEntity.DueDate.Unix(),
+		DueDate:   invoiceEntity.DueDate,
 		Amount:    int64(invoiceEntity.Amount * 100),
 		Status:    invoiceEntity.Status,
 		CreatedAt: invoiceEntity.CreatedAt.Unix(),
@@ -77,7 +77,7 @@ func (ur *InvoiceRepository) FindInvoiceById(
 	invoiceEntity := &invoice_entity.Invoice{
 		Id:        invoiceEntityMongo.Id,
 		BillId:    invoiceEntityMongo.BillId,
-		DueDate:   time.Unix(invoiceEntityMongo.DueDate, 0),
+		DueDate:   invoiceEntityMongo.DueDate,
 		Amount:    float64(invoiceEntityMongo.Amount / 100),
 		Status:    invoiceEntityMongo.Status,
 		CreatedAt: time.Unix(invoiceEntityMongo.CreatedAt, 0),
@@ -90,7 +90,7 @@ func (ur *InvoiceRepository) FindInvoiceById(
 func (repo *InvoiceRepository) FindInvoices(
 	ctx context.Context,
 	billId string,
-	status invoice_entity.InvoiceStatus) ([]invoice_entity.Invoice, *internal_error.InternalError) {
+	status invoice_entity.InvoiceStatus) ([]*invoice_entity.Invoice, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if billId != "" {
@@ -114,17 +114,17 @@ func (repo *InvoiceRepository) FindInvoices(
 		return nil, internal_error.NewInternalServerError("Error decoding invoices")
 	}
 
-	var invoicesEntity []invoice_entity.Invoice
-	for _, invoice := range invoicesMongo {
-		invoicesEntity = append(invoicesEntity, invoice_entity.Invoice{
+	invoicesEntity := make([]*invoice_entity.Invoice, len(invoicesMongo))
+	for i, invoice := range invoicesMongo {
+		invoicesEntity[i] = &invoice_entity.Invoice{
 			Id:        invoice.Id,
 			BillId:    invoice.BillId,
-			DueDate:   time.Unix(invoice.DueDate, 0),
+			DueDate:   invoice.DueDate,
 			Amount:    float64(invoice.Amount) / 100,
 			Status:    invoice.Status,
 			CreatedAt: time.Unix(invoice.CreatedAt, 0),
 			UpdatedAt: time.Unix(invoice.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return invoicesEntity, nil
@@ -134,7 +134,7 @@ func (repo *InvoiceRepository) DeleteInvoices(
 	ctx context.Context,
 	billId string,
 	status invoice_entity.InvoiceStatus,
-	dueDate time.Time) (uint, *internal_error.InternalError) {
+	dueDate string) (uint, *internal_error.InternalError) {
 
 	filter := bson.M{}
 
@@ -146,7 +146,7 @@ func (repo *InvoiceRepository) DeleteInvoices(
 		filter["status"] = status
 	}
 
-	if dueDate != (time.Time{}) {
+	if dueDate != "" {
 		filter["due_date"] = dueDate
 	}
 

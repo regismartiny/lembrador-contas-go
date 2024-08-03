@@ -43,23 +43,23 @@ func (u *TableValueSourceUseCase) FindTableValueSourceById(
 func (u *TableValueSourceUseCase) FindTableValueSources(
 	ctx context.Context,
 	status table_value_source_entity.TableValueSourceStatus,
-	name string) ([]TableValueSourceOutputDTO, *internal_error.InternalError) {
+	name string) ([]*TableValueSourceOutputDTO, *internal_error.InternalError) {
 	tableValueSourceEntities, err := u.tableValueSourceRepository.FindTableValueSources(
 		ctx, status, name)
 	if err != nil {
 		return nil, err
 	}
 
-	var tableValueSourceOutputs []TableValueSourceOutputDTO
-	for _, value := range tableValueSourceEntities {
-		tableValueSourceOutputs = append(tableValueSourceOutputs, TableValueSourceOutputDTO{
+	tableValueSourceOutputs := make([]*TableValueSourceOutputDTO, len(tableValueSourceEntities))
+	for i, value := range tableValueSourceEntities {
+		tableValueSourceOutputs[i] = &TableValueSourceOutputDTO{
 			Id:        value.Id,
 			Name:      value.Name,
 			Data:      value.Data,
 			Status:    table_value_source_entity.TableValueSourceStatus(value.Status).Name(),
 			CreatedAt: value.CreatedAt,
 			UpdatedAt: value.UpdatedAt,
-		})
+		}
 	}
 
 	return tableValueSourceOutputs, nil

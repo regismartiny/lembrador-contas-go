@@ -113,6 +113,6 @@ type EmailValueSourceRepositoryInterface interface {
 	FindEmailValueSources(
 		ctx context.Context,
 		address string,
-		subject string) ([]EmailValueSource, *internal_error.InternalError)
+		subject string) ([]*EmailValueSource, *internal_error.InternalError)
 	UpdateEmailValueSource(ctx context.Context, emailValueSourceEntity *EmailValueSource) *internal_error.InternalError
 }

@@ -43,23 +43,23 @@ func (u *UserUseCase) FindUserById(
 func (u *UserUseCase) FindUsers(
 	ctx context.Context,
 	status user_entity.UserStatus,
-	name, email string) ([]UserOutputDTO, *internal_error.InternalError) {
+	name, email string) ([]*UserOutputDTO, *internal_error.InternalError) {
 	userEntities, err := u.userRepository.FindUsers(
 		ctx, status, name, email)
 	if err != nil {
 		return nil, err
 	}
 
-	var userOutputs []UserOutputDTO
-	for _, value := range userEntities {
-		userOutputs = append(userOutputs, UserOutputDTO{
+	userOutputs := make([]*UserOutputDTO, len(userEntities))
+	for i, value := range userEntities {
+		userOutputs[i] = &UserOutputDTO{
 			Id:        value.Id,
 			Name:      value.Name,
 			Email:     value.Email,
 			Status:    user_entity.UserStatus(value.Status).Name(),
 			CreatedAt: value.CreatedAt,
 			UpdatedAt: value.UpdatedAt,
-		})
+		}
 	}
 
 	return userOutputs, nil

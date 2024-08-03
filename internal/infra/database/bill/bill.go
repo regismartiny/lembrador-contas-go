@@ -110,7 +110,7 @@ func (ur *BillRepository) FindBillById(
 func (repo *BillRepository) FindBills(
 	ctx context.Context,
 	status bill_entity.BillStatus,
-	name, company string) ([]bill_entity.Bill, *internal_error.InternalError) {
+	name, company string) ([]*bill_entity.Bill, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if status != 0 {
@@ -138,9 +138,9 @@ func (repo *BillRepository) FindBills(
 		return nil, internal_error.NewInternalServerError("Error decoding bills")
 	}
 
-	var billsEntity []bill_entity.Bill
-	for _, bill := range billsMongo {
-		billsEntity = append(billsEntity, bill_entity.Bill{
+	billsEntity := make([]*bill_entity.Bill, len(billsMongo))
+	for i, bill := range billsMongo {
+		billsEntity[i] = &bill_entity.Bill{
 			Id:              bill.Id,
 			Name:            bill.Name,
 			Company:         bill.Company,
@@ -150,7 +150,7 @@ func (repo *BillRepository) FindBills(
 			Status:          bill.Status,
 			CreatedAt:       time.Unix(bill.CreatedAt, 0),
 			UpdatedAt:       time.Unix(bill.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return billsEntity, nil

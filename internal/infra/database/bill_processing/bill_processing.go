@@ -81,7 +81,7 @@ func (ur *BillProcessingRepository) FindBillProcessingById(
 
 func (repo *BillProcessingRepository) FindBillProcessings(
 	ctx context.Context,
-	status bill_processing_entity.BillProcessingStatus) ([]bill_processing_entity.BillProcessing, *internal_error.InternalError) {
+	status bill_processing_entity.BillProcessingStatus) ([]*bill_processing_entity.BillProcessing, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if status != 0 {
@@ -101,14 +101,14 @@ func (repo *BillProcessingRepository) FindBillProcessings(
 		return nil, internal_error.NewInternalServerError("Error decoding billProcessings")
 	}
 
-	var billProcessingsEntity []bill_processing_entity.BillProcessing
-	for _, billProcessing := range billProcessingsMongo {
-		billProcessingsEntity = append(billProcessingsEntity, bill_processing_entity.BillProcessing{
+	billProcessingsEntity := make([]*bill_processing_entity.BillProcessing, len(billProcessingsMongo))
+	for i, billProcessing := range billProcessingsMongo {
+		billProcessingsEntity[i] = &bill_processing_entity.BillProcessing{
 			Id:        billProcessing.Id,
 			Status:    billProcessing.Status,
 			CreatedAt: time.Unix(billProcessing.CreatedAt, 0),
 			UpdatedAt: time.Unix(billProcessing.UpdatedAt, 0),
-		})
+		}
 	}
 
 	return billProcessingsEntity, nil

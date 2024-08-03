@@ -39,7 +39,7 @@ type BillUseCaseInterface interface {
 	FindBills(
 		ctx context.Context,
 		status bill_entity.BillStatus,
-		name, email string) ([]BillOutputDTO, *internal_error.InternalError)
+		name, email string) ([]*BillOutputDTO, *internal_error.InternalError)
 }
 
 type BillUseCase struct {

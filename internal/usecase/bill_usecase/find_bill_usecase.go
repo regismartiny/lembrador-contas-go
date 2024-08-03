@@ -49,16 +49,16 @@ func (u *BillUseCase) FindBillById(
 func (u *BillUseCase) FindBills(
 	ctx context.Context,
 	status bill_entity.BillStatus,
-	name, company string) ([]BillOutputDTO, *internal_error.InternalError) {
-	billEntities, err := u.billRepository.FindBills(
-		ctx, status, name, company)
+	name, company string) ([]*BillOutputDTO, *internal_error.InternalError) {
+
+	billEntities, err := u.billRepository.FindBills(ctx, status, name, company)
 	if err != nil {
 		return nil, err
 	}
 
-	var billOutputs []BillOutputDTO
-	for _, value := range billEntities {
-		billOutputs = append(billOutputs, BillOutputDTO{
+	billOutputs := make([]*BillOutputDTO, len(billEntities))
+	for i, value := range billEntities {
+		billOutputs[i] = &BillOutputDTO{
 			Id:              value.Id,
 			Name:            value.Name,
 			Company:         value.Company,
@@ -68,7 +68,7 @@ func (u *BillUseCase) FindBills(
 			Status:          bill_entity.BillStatus(value.Status).Name(),
 			CreatedAt:       value.CreatedAt,
 			UpdatedAt:       value.UpdatedAt,
-		})
+		}
 	}
 
 	return billOutputs, nil

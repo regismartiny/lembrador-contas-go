@@ -77,6 +77,7 @@ func main() {
 	router.PUT("/email-value-source/:id", deps.emailValueSourceController.UpdateEmailValueSource)
 	router.POST("/bill-processing/start", deps.billProcessingController.StartBillProcessing)
 	router.GET("/bill-processing/status/:id", deps.billProcessingController.GetBillProcessingStatus)
+	router.GET("/bill-processing", deps.billProcessingController.FindBillProcessings)
 
 	router.Run(":8080")
 }
