@@ -5,6 +5,7 @@ Content-Type: application/json
 
 {
     "name": "Internet",
+    "userId": "13b1d723-a107-443e-9625-36d9469f23e8",
     "company": "Vero",
     "valueSourceType": "table",
     "valueSourceId": "ad5cf585-6d20-4e60-809b-9f5f4344f7a3",

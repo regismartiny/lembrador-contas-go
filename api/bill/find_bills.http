@@ -1,4 +1,4 @@
 
-GET http://localhost:8080/bill?status=active HTTP/1.1
+GET http://localhost:8080/bill?status=active&userId=13b1d723-a107-443e-9625-36d9469f23e8 HTTP/1.1
 Host: localhost:8080
 Content-Type: application/json

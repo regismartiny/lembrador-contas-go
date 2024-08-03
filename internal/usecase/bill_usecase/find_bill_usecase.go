@@ -16,6 +16,7 @@ func FindBillUseCase(billRepository bill_entity.BillRepositoryInterface) BillUse
 
 type BillOutputDTO struct {
 	Id              string    `json:"id"`
+	UserId          string    `json:"userId"`
 	Name            string    `json:"name"`
 	Company         string    `json:"company"`
 	ValueSourceType string    `json:"valueSourceType"`
@@ -35,6 +36,7 @@ func (u *BillUseCase) FindBillById(
 
 	return &BillOutputDTO{
 		Id:              billEntity.Id,
+		UserId:          billEntity.UserId,
 		Name:            billEntity.Name,
 		Company:         billEntity.Company,
 		ValueSourceType: bill_entity.ValueSourceType(billEntity.ValueSourceType).Name(),
@@ -49,9 +51,10 @@ func (u *BillUseCase) FindBillById(
 func (u *BillUseCase) FindBills(
 	ctx context.Context,
 	status bill_entity.BillStatus,
+	userId string,
 	name, company string) ([]*BillOutputDTO, *internal_error.InternalError) {
 
-	billEntities, err := u.billRepository.FindBills(ctx, status, name, company)
+	billEntities, err := u.billRepository.FindBills(ctx, status, userId, name, company)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +63,7 @@ func (u *BillUseCase) FindBills(
 	for i, value := range billEntities {
 		billOutputs[i] = &BillOutputDTO{
 			Id:              value.Id,
+			UserId:          value.UserId,
 			Name:            value.Name,
 			Company:         value.Company,
 			ValueSourceType: bill_entity.ValueSourceType(value.ValueSourceType).Name(),

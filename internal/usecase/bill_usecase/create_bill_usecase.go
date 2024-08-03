@@ -9,6 +9,7 @@ import (
 )
 
 type BillInputDTO struct {
+	UserId          string `json:"userId" binding:"required"`
 	Name            string `json:"name" binding:"required,min=3"`
 	Company         string `json:"company" binding:"required,min=3"`
 	ValueSourceType string `json:"valueSourceType" binding:"required"`
@@ -19,6 +20,7 @@ type BillInputDTO struct {
 
 type CreateBillOutputDTO struct {
 	Id              string    `json:"id"`
+	UserId          string    `json:"userId"`
 	Name            string    `json:"name"`
 	Company         string    `json:"company"`
 	ValueSourceType string    `json:"valueSourceType"`
@@ -39,6 +41,7 @@ type BillUseCaseInterface interface {
 	FindBills(
 		ctx context.Context,
 		status bill_entity.BillStatus,
+		userId string,
 		name, email string) ([]*BillOutputDTO, *internal_error.InternalError)
 }
 
@@ -57,7 +60,7 @@ func (u *BillUseCase) CreateBill(
 	ctx context.Context,
 	billInput BillInputDTO) *internal_error.InternalError {
 
-	bill, err := bill_entity.CreateBill(billInput.Name, billInput.Company, billInput.ValueSourceType, billInput.ValueSourceId, billInput.DueDay, billInput.Status)
+	bill, err := bill_entity.CreateBill(billInput.UserId, billInput.Name, billInput.Company, billInput.ValueSourceType, billInput.ValueSourceId, billInput.DueDay, billInput.Status)
 	if err != nil {
 		return err
 	}

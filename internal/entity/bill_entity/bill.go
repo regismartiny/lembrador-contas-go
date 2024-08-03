@@ -10,6 +10,7 @@ import (
 
 type Bill struct {
 	Id              string
+	UserId          string
 	Name            string
 	Company         string
 	ValueSourceType ValueSourceType
@@ -76,6 +77,7 @@ func GetValueSourceTypeByName(name string) (ValueSourceType, *internal_error.Int
 }
 
 func CreateBill(
+	userId string,
 	name string,
 	company string,
 	valueSourceType string,
@@ -110,6 +112,7 @@ func CreateBill(
 	bill :=
 		&Bill{
 			Id:              uuid.New().String(),
+			UserId:          userId,
 			Name:            name,
 			Company:         company,
 			ValueSourceType: billValueSourceType,
@@ -142,5 +145,6 @@ type BillRepositoryInterface interface {
 	FindBills(
 		ctx context.Context,
 		status BillStatus,
+		userId string,
 		name, company string) ([]*Bill, *internal_error.InternalError)
 }

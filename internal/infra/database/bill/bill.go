@@ -17,6 +17,7 @@ import (
 
 type BillEntityMongo struct {
 	Id              string                      `bson:"_id"`
+	UserId          string                      `bson:"user_id"`
 	Name            string                      `bson:"name"`
 	Company         string                      `bson:"company"`
 	ValueSourceType bill_entity.ValueSourceType `bson:"value_source_type"`
@@ -57,6 +58,7 @@ func (ur *BillRepository) CreateBill(
 
 	BillEntityMongo := &BillEntityMongo{
 		Id:              billEntity.Id,
+		UserId:          billEntity.UserId,
 		Name:            billEntity.Name,
 		Company:         billEntity.Company,
 		ValueSourceType: billEntity.ValueSourceType,
@@ -94,6 +96,7 @@ func (ur *BillRepository) FindBillById(
 
 	billEntity := &bill_entity.Bill{
 		Id:              billEntityMongo.Id,
+		UserId:          billEntityMongo.UserId,
 		Name:            billEntityMongo.Name,
 		Company:         billEntityMongo.Company,
 		ValueSourceType: billEntityMongo.ValueSourceType,
@@ -110,11 +113,16 @@ func (ur *BillRepository) FindBillById(
 func (repo *BillRepository) FindBills(
 	ctx context.Context,
 	status bill_entity.BillStatus,
+	userId string,
 	name, company string) ([]*bill_entity.Bill, *internal_error.InternalError) {
 	filter := bson.M{}
 
 	if status != 0 {
 		filter["status"] = status
+	}
+
+	if userId != "" {
+		filter["user_id"] = userId
 	}
 
 	if name != "" {
@@ -142,6 +150,7 @@ func (repo *BillRepository) FindBills(
 	for i, bill := range billsMongo {
 		billsEntity[i] = &bill_entity.Bill{
 			Id:              bill.Id,
+			UserId:          bill.UserId,
 			Name:            bill.Name,
 			Company:         bill.Company,
 			ValueSourceType: bill.ValueSourceType,

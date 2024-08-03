@@ -126,7 +126,8 @@ func (u *BillProcessingUseCase) manageProcessingTimeot(ctx context.Context, bill
 func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing) {
 	log.Println("Bill processing started")
 
-	activeBills, err := u.billRepository.FindBills(ctx, bill_entity.Active, "", "")
+	//Find all active bills
+	activeBills, err := u.billRepository.FindBills(ctx, bill_entity.Active, "", "", "")
 	if err != nil {
 		log.Println("Error trying to find active bills", err)
 		return

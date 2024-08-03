@@ -35,6 +35,7 @@ func (u *BillController) FindBillById(c *gin.Context) {
 
 func (u *BillController) FindBills(c *gin.Context) {
 	status := c.Query("status")
+	userId := c.Query("userId")
 	name := c.Query("name")
 	company := c.Query("company")
 
@@ -46,7 +47,7 @@ func (u *BillController) FindBills(c *gin.Context) {
 	}
 
 	auctions, err := u.billUseCase.FindBills(context.Background(),
-		billStatus, name, company)
+		billStatus, userId, name, company)
 	if err != nil {
 		errRest := rest_err.ConvertError(err)
 		c.JSON(errRest.Code, errRest)
