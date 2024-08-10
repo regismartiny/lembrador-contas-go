@@ -20,9 +20,6 @@ const (
 	PROCESSING_TIMEOUT_DURATION = "PROCESSING_TIMEOUT_DURATION"
 )
 
-type BillProcessingInputDTO struct {
-}
-
 type StartBillProcessingOutputDTO struct {
 	BillProcessingId string `json:"id"`
 }
@@ -30,7 +27,7 @@ type StartBillProcessingOutputDTO struct {
 type BillProcessingUseCaseInterface interface {
 	StartBillProcessing(
 		ctx context.Context,
-		billProcessingInput BillProcessingInputDTO) (StartBillProcessingOutputDTO, *internal_error.InternalError)
+		period string) (StartBillProcessingOutputDTO, *internal_error.InternalError)
 	GetBillProcessingStatus(
 		ctx context.Context,
 		billProcessingId string) (GetBillProcessingStatusOutputDTO, *internal_error.InternalError)
@@ -68,14 +65,14 @@ func NewBillProcessingUseCase(
 
 func (u *BillProcessingUseCase) StartBillProcessing(
 	ctx context.Context,
-	billProcessingInput BillProcessingInputDTO) (StartBillProcessingOutputDTO, *internal_error.InternalError) {
+	period string) (StartBillProcessingOutputDTO, *internal_error.InternalError) {
 
 	if err := u.verifyNoProcessingInProgress(ctx); err != nil {
 		log.Println("Error trying to start bill processing", err)
 		return StartBillProcessingOutputDTO{}, err
 	}
 
-	billProcessing, err := bill_processing_entity.CreateBillProcessing("")
+	billProcessing, err := bill_processing_entity.CreateBillProcessing("", period)
 	if err != nil {
 		return StartBillProcessingOutputDTO{}, err
 	}
@@ -124,7 +121,7 @@ func (u *BillProcessingUseCase) manageProcessingTimeot(ctx context.Context, bill
 }
 
 func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing) {
-	log.Println("Bill processing started")
+	log.Println("Bill processing started. Period:", billProcessing.Period)
 
 	//Find all active bills
 	activeBills, err := u.billRepository.FindBills(ctx, bill_entity.Active, "", "", "")
@@ -135,7 +132,7 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 
 	for _, bill := range activeBills {
 
-		if err := u.processBill(ctx, bill); err != nil {
+		if err := u.processBill(ctx, bill, billProcessing); err != nil {
 			log.Println("Error trying to process bill", err)
 			billProcessing.Status = bill_processing_entity.Error
 			u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
@@ -149,11 +146,16 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 	u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
 }
 
-func (u *BillProcessingUseCase) processBill(ctx context.Context, bill *bill_entity.Bill) *internal_error.InternalError {
+func (u *BillProcessingUseCase) processBill(ctx context.Context, bill *bill_entity.Bill, billProcessing *bill_processing_entity.BillProcessing) *internal_error.InternalError {
 	log.Printf("Processing bill: %v", bill)
 
-	// Deleting all unpaid invoices of current bill
-	u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, "")
+	// Deleting all unpaid invoices of current bill for selected processing period
+	processingPeriod, _ := time.Parse("2006-01", billProcessing.Period)
+	billDueDate := time.Date(processingPeriod.Year(), processingPeriod.Month()+1, int(bill.DueDay), 0, 0, 0, 0, time.Local).Format("2006-01-02")
+	log.Printf("Deleting invoices with due date: %v", billDueDate)
+	invoicesDeleted, _ := u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, billDueDate)
+
+	log.Printf("Invoices deleted: %v", invoicesDeleted)
 
 	valueSourceId := bill.ValueSourceId
 	valueSourceType := bill.ValueSourceType
@@ -212,7 +214,7 @@ func (u *BillProcessingUseCase) createInvoice(ctx context.Context, bill *bill_en
 	log.Println("Creating invoice")
 
 	invoice, err := invoice_entity.CreateInvoice(
-		bill.Name,
+		bill.Id,
 		dueDate.Format("2006-01-02"),
 		amount,
 		"",

@@ -11,6 +11,7 @@ import (
 type BillProcessing struct {
 	Id        string
 	Status    BillProcessingStatus
+	Period    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -51,7 +52,8 @@ func GetBillProcessingStatusByName(name string) (BillProcessingStatus, *internal
 }
 
 func CreateBillProcessing(
-	status string) (*BillProcessing, *internal_error.InternalError) {
+	status string,
+	period string) (*BillProcessing, *internal_error.InternalError) {
 
 	var billProcessingStatus BillProcessingStatus
 
@@ -68,6 +70,7 @@ func CreateBillProcessing(
 	billProcessing :=
 		&BillProcessing{
 			Id:        uuid.New().String(),
+			Period:    period,
 			Status:    billProcessingStatus,
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),

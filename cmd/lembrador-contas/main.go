@@ -40,7 +40,7 @@ func main() {
 		return
 	}
 
-	log.Println("Establising connection with database...")
+	log.Println("Establishing connection with database...")
 	databaseConnection, err := mongodb.NewMongoDBConnection(ctx)
 	if err != nil {
 		log.Fatal(err.Error())

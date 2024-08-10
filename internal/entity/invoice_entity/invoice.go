@@ -82,9 +82,6 @@ func CreateInvoice(
 }
 
 func (invoice *Invoice) Validate() *internal_error.InternalError {
-	if uuid.Validate(invoice.BillId) == nil {
-		return internal_error.NewBadRequestError("invalid invoice object. invalid bill id")
-	}
 	if _, err := time.Parse("2006-01-02", invoice.DueDate); err != nil {
 		return internal_error.NewBadRequestError("invalid invoice object. invalid due date")
 	}
