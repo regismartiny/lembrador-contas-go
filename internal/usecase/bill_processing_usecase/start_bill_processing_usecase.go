@@ -2,8 +2,10 @@ package bill_processing_usecase
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/regismartiny/lembrador-contas-go/internal/data_extractor/email_data_extractor"
@@ -130,19 +132,34 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 		return
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(len(activeBills))
+
+	billProcessingErrors := make([]string, 0)
+
 	for _, bill := range activeBills {
 
-		if err := u.processBill(ctx, bill, billProcessing); err != nil {
-			log.Println("Error trying to process bill", err)
-			billProcessing.Status = bill_processing_entity.Error
-			u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
-			return
-		}
+		go func() {
+			defer wg.Done()
+
+			if err := u.processBill(ctx, bill, billProcessing); err != nil {
+				errString := fmt.Sprintf("Error trying to process bill %v: %v", bill.Id, err)
+				log.Println(errString)
+				billProcessingErrors = append(billProcessingErrors, errString)
+			}
+		}()
 	}
 
-	log.Println("Bill processing finished successfully")
+	wg.Wait()
 
-	billProcessing.Status = bill_processing_entity.Success
+	if len(billProcessingErrors) > 0 {
+		log.Println("Bill processing finished with errors")
+		billProcessing.Status = bill_processing_entity.Error
+	} else {
+		log.Println("Bill processing finished successfully")
+		billProcessing.Status = bill_processing_entity.Success
+	}
+
 	u.billProcessingRepository.UpdateBillProcessing(ctx, billProcessing)
 }
 
