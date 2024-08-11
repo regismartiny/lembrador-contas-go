@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type EmailValueSourceEntityMongo struct {
@@ -31,20 +30,8 @@ type EmailValueSourceRepository struct {
 func NewEmailValueSourceRepository(ctx context.Context, database *mongo.Database) *EmailValueSourceRepository {
 	coll := database.Collection("emailValueSources")
 
-	createEmailValueSourceNameUniqueIndex(ctx, coll)
-
 	return &EmailValueSourceRepository{
 		Collection: coll,
-	}
-}
-
-func createEmailValueSourceNameUniqueIndex(ctx context.Context, coll *mongo.Collection) {
-	_, err := coll.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys:    bson.M{"name": 1},
-		Options: options.Index().SetUnique(true),
-	})
-	if err != nil {
-		logger.Error("Error creating emailValueSource name unique index", err)
 	}
 }
 
@@ -151,6 +138,7 @@ func (repo *EmailValueSourceRepository) FindEmailValueSources(
 	emailValueSourcesEntity := make([]*email_value_source_entity.EmailValueSource, len(emailValueSourcesMongo))
 	for i, emailValueSource := range emailValueSourcesMongo {
 		emailValueSourcesEntity[i] = &email_value_source_entity.EmailValueSource{
+			Id:            emailValueSource.Id,
 			Address:       emailValueSource.Address,
 			Subject:       emailValueSource.Subject,
 			DataExtractor: emailValueSource.DataExtractor,

@@ -166,13 +166,7 @@ func (u *BillProcessingUseCase) startProcessing(ctx context.Context, billProcess
 func (u *BillProcessingUseCase) processBill(ctx context.Context, bill *bill_entity.Bill, billProcessing *bill_processing_entity.BillProcessing) *internal_error.InternalError {
 	log.Printf("Processing bill: %v", bill)
 
-	// Deleting all unpaid invoices of current bill for selected processing period
-	processingPeriod, _ := time.Parse("2006-01", billProcessing.Period)
-	billDueDate := time.Date(processingPeriod.Year(), processingPeriod.Month()+1, int(bill.DueDay), 0, 0, 0, 0, time.Local).Format("2006-01-02")
-	log.Printf("Deleting invoices with due date: %v", billDueDate)
-	invoicesDeleted, _ := u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, billDueDate)
-
-	log.Printf("Invoices deleted: %v", invoicesDeleted)
+	u.deleteUnpaidInvoices(ctx, billProcessing, bill)
 
 	valueSourceId := bill.ValueSourceId
 	valueSourceType := bill.ValueSourceType
@@ -197,6 +191,18 @@ func (u *BillProcessingUseCase) processBill(ctx context.Context, bill *bill_enti
 	}
 
 	return nil
+}
+
+func (u *BillProcessingUseCase) deleteUnpaidInvoices(ctx context.Context, billProcessing *bill_processing_entity.BillProcessing, bill *bill_entity.Bill) {
+	log.Printf("Deleting unpaid invoices for period: %v", billProcessing.Period)
+
+	processingPeriod, _ := time.Parse("2006-01", billProcessing.Period)
+	billDueDate := time.Date(processingPeriod.Year(), processingPeriod.Month()+1, int(bill.DueDay), 0, 0, 0, 0, time.Local).Format("2006-01-02")
+
+	log.Printf("Deleting invoices with due date: %v", billDueDate)
+	invoicesDeleted, _ := u.invoiceRepository.DeleteInvoices(ctx, bill.Id, invoice_entity.Unpaid, billDueDate)
+
+	log.Printf("Invoices deleted: %v", invoicesDeleted)
 }
 
 func (u *BillProcessingUseCase) processTableValueSource(ctx context.Context, bill *bill_entity.Bill,
@@ -252,7 +258,7 @@ func (u *BillProcessingUseCase) processEmailValueSource(ctx context.Context, bil
 
 	now := time.Now()
 	dueDate := time.Date(now.Year(), now.Month(), int(bill.DueDay), 0, 0, 0, 0, time.Local)
-	processingDate := dueDate.AddDate(0, -1, 0) // always process previous month
+	processingDate := dueDate.AddDate(0, -1, 0) // previous month
 
 	startDate := time.Date(processingDate.Year(), processingDate.Month(), 1, 0, 0, 0, 0, time.Local)
 	endDate := startDate.AddDate(0, 1, -1) //last day of month

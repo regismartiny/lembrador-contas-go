@@ -27,7 +27,8 @@ func NewEmailDataExtractor(emailService email_service.EmailServiceInterface, dat
 	switch dataExtractor {
 	case email_value_source_entity.CPFL_EMAIL_EXTRACTOR:
 		return NewCpflEmailDataExtractor(emailService)
-
+	case email_value_source_entity.CORSAN_EMAIL_EXTRACTOR:
+		return NewCorsanEmailDataExtractor(emailService)
 	default:
 		return nil
 	}

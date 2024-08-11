@@ -21,6 +21,7 @@ type EmailValueSourceDataExtractor uint8
 
 const (
 	CPFL_EMAIL_EXTRACTOR EmailValueSourceDataExtractor = iota + 1
+	CORSAN_EMAIL_EXTRACTOR
 )
 
 func (s EmailValueSourceDataExtractor) Name() string {
@@ -30,6 +31,7 @@ func (s EmailValueSourceDataExtractor) Name() string {
 var emailValueSourceDataExtractorNames = []string{
 	"",
 	"CPFL_EMAIL_EXTRACTOR",
+	"CORSAN_EMAIL_EXTRACTOR",
 }
 
 func GetEmailValueSourceDataExtractorByName(name string) (EmailValueSourceDataExtractor, *internal_error.InternalError) {
@@ -101,7 +103,7 @@ func (emailValueSource *EmailValueSource) Update(
 
 func (emailValueSource *EmailValueSource) Validate() *internal_error.InternalError {
 	if len(emailValueSource.Address) < 5 {
-		return internal_error.NewBadRequestError("invalid emailValueSource object")
+		return internal_error.NewBadRequestError("invalid emailValueSource object. invalid address")
 	}
 
 	return nil
