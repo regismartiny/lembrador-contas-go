@@ -133,7 +133,10 @@ func CreateBill(
 func (bill *Bill) Validate() *internal_error.InternalError {
 	if len(bill.Name) < 3 ||
 		len(bill.Company) < 3 {
-		return internal_error.NewBadRequestError("invalid bill object")
+		return internal_error.NewBadRequestError("invalid bill object: invalid name or company")
+	}
+	if bill.DueDay > 28 {
+		return internal_error.NewBadRequestError("invalid bill object: invalid due day. must be between 1 and 28")
 	}
 
 	return nil
